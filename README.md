@@ -26,7 +26,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/KingDeeFlagship_MCP.git
+git clone https://github.com/CodyGit/KingDeeFlagship_MCP.git
 cd KingDeeFlagship_MCP
 
 # 创建 32 位虚拟环境（重要！）
