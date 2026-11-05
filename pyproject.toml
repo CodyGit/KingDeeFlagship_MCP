@@ -1,0 +1,53 @@
+# date: 2026-11-06 14:30
+# author: cody
+# description: KingDee KIS Flagship MCP Server 项目配置
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kingdee-flagship-mcp"
+version = "2.0.0"
+description = "金蝶 KIS 旗舰版 MCP 服务器 - 通过 COM 组件连接金蝶账套"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "KingDee MCP Team"}
+]
+keywords = ["kingdee", "kis", "mcp", "erp", "财务软件"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: Microsoft :: Windows",
+]
+
+dependencies = [
+    "pywin32>=306; sys_platform == 'win32'"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+kingdee-mcp = "kingdee_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/KingDeeFlagship_MCP"
+Repository = "https://github.com/yourusername/KingDeeFlagship_MCP"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+kingdee_mcp = ["config/*.json"]

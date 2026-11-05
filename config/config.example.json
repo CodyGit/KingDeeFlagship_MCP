@@ -1,0 +1,28 @@
+{
+  "mode": "com",
+  "backend_order": ["com"],
+  "allow_sql_prefixes": ["select", "with"],
+  "max_page_size": 2000,
+  "logs_dir": "logs",
+  "log_sql_max": 2000,
+  "log_retention_days": 90,
+  "memory_path": "memory.json",
+  "cred_path": "cred.bin",
+  "subjects": {
+    "示例公司": {
+      "acct_id": "AIS20230001",
+      "acct_name": "示例账套",
+      "note": "测试账套"
+    }
+  },
+  "com": {
+    "progid": "K3Login.ClsLogin",
+    "ui_login": true,
+    "acct_name": "",
+    "user": "",
+    "password": "",
+    "acct_id": "",
+    "component_progids": {},
+    "ado_timeout": 30
+  }
+}
