@@ -208,6 +208,12 @@ pytest
 pylint src/kingdeeflagship_mcp
 ```
 
+## 文档
+
+- `docs/design.md`：项目设计文档（架构、流程、配置、扩展方式、已知问题）
+- `docs/kimi-plugin-design.md`：Kimi 桌面端插件打包设计
+- `USAGE.md`：安装与使用指南
+
 ## 许可证
 
 MIT License
