@@ -7,7 +7,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "kingdee-flagship-mcp"
+name = "kingdeeflagship-mcp"
 version = "1.0.0"
 description = "金蝶 KIS 旗舰版 MCP 服务器 - 通过 COM 组件连接金蝶账套"
 readme = "README.md"
@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-kingdee-mcp = "kingdee_mcp.cli:main"
+kingdeeflagship-mcp = "kingdeeflagship_mcp.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/KingDeeFlagship_MCP"
@@ -50,4 +50,4 @@ Repository = "https://github.com/yourusername/KingDeeFlagship_MCP"
 where = ["src"]
 
 [tool.setuptools.package-data]
-kingdee_mcp = ["config/*.json"]
+kingdeeflagship_mcp = ["config/*.json"]

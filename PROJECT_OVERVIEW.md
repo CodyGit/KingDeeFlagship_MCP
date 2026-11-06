@@ -12,7 +12,7 @@
 
 ```
 KingDeeFlagship_MCP/
-├── src/kingdee_mcp/        # 主包（18个Python文件）
+├── src/kingdeeflagship_mcp/        # 主包（18个Python文件）
 │   ├── __init__.py         # 包初始化
 │   ├── __main__.py         # 入口点
 │   ├── mcp_server.py       # MCP 服务器核心
@@ -100,13 +100,13 @@ pip install -e .
 
 ```bash
 # 查看状态
-kingdee-mcp status
+kingdeeflagship-mcp status
 
 # 测试连接
-kingdee-mcp connect
+kingdeeflagship-mcp connect
 
 # 查询
-kingdee-mcp query customer --limit 5
+kingdeeflagship-mcp query customer --limit 5
 ```
 
 ### 配置 MCP 客户端
@@ -118,7 +118,7 @@ kingdee-mcp query customer --limit 5
   "mcpServers": {
     "kingdee-kis": {
       "command": "路径\.venv32\Scripts\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "项目路径",
       "env": {
         "PYTHONPATH": "项目路径\src"

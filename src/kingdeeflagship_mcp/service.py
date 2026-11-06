@@ -39,7 +39,7 @@ def _mask(cfg: Any) -> Any:
 class KISConnector:
     """金蝶 KIS 旗舰版连接器。
 
-    >>> from kingdee_mcp import KISConnector
+    >>> from kingdeeflagship_mcp import KISConnector
     >>> kis = KISConnector()
     >>> kis.connect()                       # COM 登录（弹金蝶登录窗）
     >>> kis.query("customer", keyword="科技", limit=20)

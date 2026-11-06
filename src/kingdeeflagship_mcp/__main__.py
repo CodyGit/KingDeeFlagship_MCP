@@ -5,9 +5,9 @@
 """命令行入口：支持 CLI 和 MCP 服务器模式。
 
 用法:
-    python -m kingdee_mcp status
-    python -m kingdee_mcp connect
-    python -m kingdee_mcp mcp
+    python -m kingdeeflagship_mcp status
+    python -m kingdeeflagship_mcp connect
+    python -m kingdeeflagship_mcp mcp
 """
 
 import sys

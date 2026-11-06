@@ -59,17 +59,17 @@ python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"
 pip install -e .
 
 # 验证安装
-kingdee-mcp --help
+kingdeeflagship-mcp --help
 ```
 
 ### 2.4 创建配置文件
 
 ```bash
-# 复制示例配置
-copy config\config.example.json config\config.json
+# 在用户数据目录生成配置模板（%LOCALAPPDATA%\kingdeeflagship_mcp\config.json）
+kingdeeflagship-mcp init-config
 ```
 
-编辑 `config\config.json`：
+配置文件与 memory.json、cred.bin、logs 同在该目录，可用环境变量 `KIS_HOME` 改位置，`KIS_CONFIG` 指定其它配置文件。编辑 `config.json`：
 
 ```json
 {
@@ -97,26 +97,26 @@ copy config\config.example.json config\config.json
 
 ```bash
 # 查看状态
-kingdee-mcp status
+kingdeeflagship-mcp status
 
 # 测试登录（会弹出金蝶登录窗口）
-kingdee-mcp connect
+kingdeeflagship-mcp connect
 
 # 查询客户列表
-kingdee-mcp query customer --keyword 科技 --limit 10
+kingdeeflagship-mcp query customer --keyword 科技 --limit 10
 
 # 查询凭证
-kingdee-mcp vouchers --start-date 2024-01-01 --end-date 2024-01-31 --limit 20
+kingdeeflagship-mcp vouchers --start-date 2024-01-01 --end-date 2024-01-31 --limit 20
 ```
 
 ### 3.2 环境探测
 
 ```bash
 # 探测运行环境
-kingdee-mcp discover
+kingdeeflagship-mcp discover
 
 # 检查实体表是否齐全（需先连接）
-kingdee-mcp discover --check-tables
+kingdeeflagship-mcp discover --check-tables
 ```
 
 ## 四、配置 MCP 服务器
@@ -134,11 +134,10 @@ kingdee-mcp discover --check-tables
   "mcpServers": {
     "kingdee-kis": {
       "command": "E:\\path\\to\\KingDeeFlagship_MCP\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
       "env": {
-        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src",
-        "KIS_CONFIG": "E:\\path\\to\\KingDeeFlagship_MCP\\config\\config.json"
+        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"
       }
     }
   }
@@ -160,7 +159,7 @@ kingdee-mcp discover --check-tables
   "mcpServers": {
     "kingdee-kis": {
       "command": "E:\\path\\to\\KingDeeFlagship_MCP\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
       "env": {
         "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"
@@ -180,7 +179,7 @@ kingdee-mcp discover --check-tables
 
 ```bash
 # 存储凭据（使用 DPAPI 加密）
-kingdee-mcp store-cred --key default --user 用户名 --acct-id AIS20230001
+kingdeeflagship-mcp store-cred --key default --user 用户名 --acct-id AIS20230001
 # 会提示输入密码（不回显）
 
 # 修改配置文件
@@ -251,7 +250,7 @@ python -c "import struct; print(struct.calcsize('P') * 8)"
 
 ```bash
 # 列出所有账套
-kingdee-mcp account-sets
+kingdeeflagship-mcp account-sets
 
 # 确认账套 ID 格式（通常是 AIS + 数字）
 ```
@@ -286,13 +285,13 @@ kingdee-mcp account-sets
 
 ```bash
 # 查看最新日志
-kingdee-mcp logs latest
+kingdeeflagship-mcp logs latest
 
 # 列出所有日志
-kingdee-mcp logs list
+kingdeeflagship-mcp logs list
 
 # 读取指定日志
-kingdee-mcp logs read --path logs\session-20241106-143000.jsonl --limit 50
+kingdeeflagship-mcp logs read --path logs\session-20241106-143000.jsonl --limit 50
 ```
 
 ### 7.2 日志位置
@@ -307,7 +306,7 @@ kingdee-mcp logs read --path logs\session-20241106-143000.jsonl --limit 50
 
 ```bash
 # 运行自检
-python -m kingdee_mcp mcp --self-test
+python -m kingdeeflagship_mcp mcp --self-test
 ```
 
 ### 8.2 手动测试
@@ -320,7 +319,7 @@ import subprocess
 
 # 启动 MCP 服务器
 proc = subprocess.Popen(
-    ['python', '-m', 'kingdee_mcp', 'mcp'],
+    ['python', '-m', 'kingdeeflagship_mcp', 'mcp'],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
@@ -366,8 +365,8 @@ python test_mcp.py
 ```bash
 # 直接运行（不安装）
 cd src
-python -m kingdee_mcp status
-python -m kingdee_mcp mcp
+python -m kingdeeflagship_mcp status
+python -m kingdeeflagship_mcp mcp
 ```
 
 ### 10.2 修改代码后重新安装

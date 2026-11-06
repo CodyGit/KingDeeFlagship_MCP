@@ -42,14 +42,14 @@ pip install -e .
 
 ### 2. 配置
 
-复制示例配置：
+配置文件与记忆、凭据、日志放在同一个用户数据目录，默认 `%LOCALAPPDATA%\kingdeeflagship_mcp\`（可用环境变量 `KIS_HOME` 改位置）。
+生成配置模板，或复制仓库里的 `config/config.example.json` 过去：
 
 ```bash
-mkdir config
-copy config.example.json config\config.json
+kingdeeflagship-mcp init-config
 ```
 
-编辑 `config\config.json`：
+编辑 `%LOCALAPPDATA%\kingdeeflagship_mcp\config.json`：
 
 ```json
 {
@@ -72,13 +72,13 @@ copy config.example.json config\config.json
 
 ```bash
 # 查看连接器状态
-kingdee-mcp status
+kingdeeflagship-mcp status
 
 # 测试登录（会弹出金蝶登录窗）
-kingdee-mcp connect
+kingdeeflagship-mcp connect
 
 # 查询客户列表
-kingdee-mcp query customer --keyword 科技 --limit 10
+kingdeeflagship-mcp query customer --keyword 科技 --limit 10
 ```
 
 ### 4. 作为 MCP 服务器运行
@@ -90,11 +90,10 @@ kingdee-mcp query customer --keyword 科技 --limit 10
   "mcpServers": {
     "kingdee-kis": {
       "command": "E:\\path\\to\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
       "env": {
-        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src",
-        "KIS_CONFIG": "E:\\path\\to\\KingDeeFlagship_MCP\\config\\config.json"
+        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"
       }
     }
   }
@@ -106,7 +105,7 @@ kingdee-mcp query customer --keyword 科技 --limit 10
 ```
 KingDeeFlagship_MCP/
 ├── src/
-│   └── kingdee_mcp/          # 主包
+│   └── kingdeeflagship_mcp/          # 主包
 │       ├── __init__.py
 │       ├── __main__.py       # 入口
 │       ├── mcp_server.py     # MCP 服务器
@@ -126,8 +125,7 @@ KingDeeFlagship_MCP/
 │           ├── base.py
 │           └── com_backend.py
 ├── config/
-│   ├── config.example.json   # 示例配置
-│   └── config.json           # 实际配置（git ignore）
+│   └── config.example.json   # 示例配置（实际配置在用户数据目录）
 ├── templates/
 │   └── export_task.py        # 批量导出模板
 ├── tests/                    # 测试（待添加）
@@ -190,7 +188,7 @@ KingDeeFlagship_MCP/
 使用 `store-cred` 命令存储 DPAPI 加密凭据：
 
 ```bash
-kingdee-mcp store-cred --key default --user 用户名 --acct-id AIS20230001
+kingdeeflagship-mcp store-cred --key default --user 用户名 --acct-id AIS20230001
 ```
 
 ### 如何支持多个账套？
@@ -207,7 +205,7 @@ pip install -e ".[dev]"
 pytest
 
 # 代码检查
-pylint src/kingdee_mcp
+pylint src/kingdeeflagship_mcp
 ```
 
 ## 许可证

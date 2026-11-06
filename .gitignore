@@ -41,9 +41,9 @@ Thumbs.db
 # Project specific
 logs/
 *.log
-config/cred.bin
-config/memory.json
-config/memory.json.bak
+cred.bin
+memory.json
+memory.json.bak
 config.json
 .kis_write_test
 

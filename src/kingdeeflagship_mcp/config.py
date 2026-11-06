@@ -83,7 +83,7 @@ def _set_path(cfg: Dict[str, Any], path: str, value: Any) -> None:
 
 # description: 用户数据目录（配置/凭据/记忆/日志），插件升级覆盖程序目录时不受影响
 def kis_home() -> str:
-    """用户数据目录：环境变量 KIS_HOME > %LOCALAPPDATA%\\kingdee-flagship-mcp。
+    """用户数据目录：环境变量 KIS_HOME > %LOCALAPPDATA%\\kingdeeflagship_mcp。
 
     放 LOCALAPPDATA 而非 APPDATA：cred.bin 由 DPAPI 绑定本机+本用户，漫游到其它机器也无法解密。
     """
@@ -91,35 +91,22 @@ def kis_home() -> str:
     if env:
         return env
     base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "kingdee-flagship-mcp")
+    return os.path.join(base, "kingdeeflagship_mcp")
 
 
 def resolve_config_path(path: Optional[str] = None) -> str:
-    """配置路径解析优先级：
+    """配置路径解析优先级：显式 path > 环境变量 KIS_CONFIG > 用户数据目录 config.json。
 
-    显式 path > 环境变量 KIS_CONFIG > 当前目录 config.json > 用户数据目录 config.json
-    > 连接器自带 config/config.json > 用户数据目录 config.json（尚不存在，用默认值）。
-
-    保证任何工作目录下启动的脚本/MCP 都能加载到同一份配置
-    （subjects 主体映射、memory/cred/logs 路径），避免"换个目录就丢配置"。
+    config.json 与 memory.json / cred.bin / logs 同在用户数据目录，
+    保证任何工作目录下启动的脚本/MCP 都加载同一份配置，且不受插件升级影响。
+    文件尚不存在时返回该路径，加载时使用默认值。
     """
     if path:
         return path
     env = os.environ.get("KIS_CONFIG")
     if env:
         return env
-    cwd_cfg = os.path.join(os.getcwd(), "config.json")
-    if os.path.exists(cwd_cfg):
-        return cwd_cfg
-    user_cfg = os.path.join(kis_home(), "config.json")
-    if os.path.exists(user_cfg):
-        return user_cfg
-    # 仓库根目录：src/kingdee_mcp/config.py 向上三级（插件包内不打包 config/，此项自然跳过）
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    bundled = os.path.join(root, "config", "config.json")
-    if os.path.exists(bundled):
-        return bundled
-    return user_cfg
+    return os.path.join(kis_home(), "config.json")
 
 
 def load_config(path: Optional[str] = None) -> Dict[str, Any]:

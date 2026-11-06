@@ -12,7 +12,7 @@
 
 ```
 KingDeeFlagship_MCP/
-├── src/kingdee_mcp/        # 主包（17个Python文件）
+├── src/kingdeeflagship_mcp/        # 主包（17个Python文件）
 │   ├── __init__.py         # 包初始化
 │   ├── __main__.py         # 入口点
 │   ├── mcp_server.py       # MCP 服务器核心
@@ -64,7 +64,7 @@ KingDeeFlagship_MCP/
 - **pyproject.toml** - 替代 setup.py 和 requirements.txt
 - **src layout** - 避免导入冲突
 - **可编辑安装** - `pip install -e .`
-- **命令行入口** - `kingdee-mcp` 全局命令
+- **命令行入口** - `kingdeeflagship-mcp` 全局命令
 
 ### 4. 文档完善 ✅
 
@@ -83,20 +83,20 @@ KingDeeFlagship_MCP/
 
 ### 包名变更
 - **旧**: `kis_connector`
-- **新**: `kingdee_mcp`
+- **新**: `kingdeeflagship_mcp`
 
 ### 目录布局
 - **旧**: 根目录包
-- **新**: src layout（`src/kingdee_mcp/`）
+- **新**: src layout（`src/kingdeeflagship_mcp/`）
 
 ### 依赖管理
 - **旧**: `requirements.txt`
 - **新**: `pyproject.toml`
 
 ### 命令行工具
-- **安装后**: `kingdee-mcp status`
-- **模块方式**: `python -m kingdee_mcp status`
-- **MCP服务器**: `python -m kingdee_mcp mcp`
+- **安装后**: `kingdeeflagship-mcp status`
+- **模块方式**: `python -m kingdeeflagship_mcp status`
+- **MCP服务器**: `python -m kingdeeflagship_mcp mcp`
 
 ## 🎯 MCP 工具清单（24个）
 
@@ -168,8 +168,8 @@ C:\Python311-32\python.exe -m venv .venv32
 pip install -e .
 
 # 测试
-kingdee-mcp --help
-kingdee-mcp status
+kingdeeflagship-mcp --help
+kingdeeflagship-mcp status
 ```
 
 ### 2. 创建配置文件
@@ -183,10 +183,10 @@ copy config\config.example.json config\config.json
 
 ```bash
 # 会弹出金蝶登录窗口
-kingdee-mcp connect
+kingdeeflagship-mcp connect
 
 # 查询测试
-kingdee-mcp query customer --limit 5
+kingdeeflagship-mcp query customer --limit 5
 ```
 
 ### 4. 配置 MCP 客户端
@@ -198,7 +198,7 @@ kingdee-mcp query customer --limit 5
   "mcpServers": {
     "kingdee-kis": {
       "command": "E:\\AI\\ClaudeProject\\KingDee\\KingDeeFlagship_MCP\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "E:\\AI\\ClaudeProject\\KingDee\\KingDeeFlagship_MCP",
       "env": {
         "PYTHONPATH": "E:\\AI\\ClaudeProject\\KingDee\\KingDeeFlagship_MCP\\src"
@@ -227,7 +227,7 @@ python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"
 from kis_connector import KISConnector
 
 # 新代码
-from kingdee_mcp import KISConnector
+from kingdeeflagship_mcp import KISConnector
 ```
 
 ### 3. 配置文件位置
@@ -263,7 +263,7 @@ from kingdee_mcp import KISConnector
 
 ## 🎉 总结
 
-已成功将 `kingdee-flagship-mcp` 重构为标准的 MCP 工程 `KingDeeFlagship_MCP`：
+已成功将 `kingdeeflagship_mcp` 重构为标准的 MCP 工程 `KingDeeFlagship_MCP`：
 
 - ✅ 代码完整迁移（零损失）
 - ✅ 结构符合 Python 标准
@@ -277,5 +277,5 @@ from kingdee_mcp import KISConnector
 
 生成时间：2026-11-06 14:30  
 重构版本：v1.0.0  
-原项目：kingdee-flagship-mcp  
+原项目：kingdeeflagship_mcp  
 新项目：KingDeeFlagship_MCP

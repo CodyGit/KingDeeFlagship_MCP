@@ -1,23 +1,24 @@
 # -*- coding: utf-8 -*-
 """命令行入口：配置初始化 / 环境探测 / 查询取数 / MCP 服务器。
 
-    python -m kingdee_mcp discover
-    python -m kingdee_mcp status
-    python -m kingdee_mcp entities --module finance
-    python -m kingdee_mcp query customer --keyword 科技 --limit 20
-    python -m kingdee_mcp read voucher 1001
-    python -m kingdee_mcp sql "SELECT TOP 10 * FROM t_Account"
-    python -m kingdee_mcp mcp
+    python -m kingdeeflagship_mcp discover
+    python -m kingdeeflagship_mcp status
+    python -m kingdeeflagship_mcp entities --module finance
+    python -m kingdeeflagship_mcp query customer --keyword 科技 --limit 20
+    python -m kingdeeflagship_mcp read voucher 1001
+    python -m kingdeeflagship_mcp sql "SELECT TOP 10 * FROM t_Account"
+    python -m kingdeeflagship_mcp mcp
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from .config import DEFAULT_CONFIG
+from .config import DEFAULT_CONFIG, kis_home
 from .errors import KISError
 from .models import PageResult
 from .service import KISConnector
@@ -68,12 +69,12 @@ def _verify_creds(config: Any, acct_name: str, user: str, pwd: str):
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="kis", description="金蝶 KIS 旗舰版连接器")
-    p.add_argument("--config", "-c", default=None, help="配置文件路径（默认 KIS_CONFIG 或 ./config.json）")
+    p.add_argument("--config", "-c", default=None, help="配置文件路径（默认 KIS_CONFIG 或用户数据目录 config.json）")
     p.add_argument("--mode", "-m", default=None, help="后端: com（唯一后端）")
     sub = p.add_subparsers(dest="cmd")
 
     sub.add_parser("init-config", help="生成配置文件模板").add_argument(
-        "--path", default="config.json")
+        "--path", default=None, help="输出路径（默认用户数据目录 config.json）")
 
     d = sub.add_parser("discover", help="探测运行环境（依赖/COM组件/账套/表校验）")
     d.add_argument("--check-tables", action="store_true")
@@ -174,9 +175,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     cmd = args.cmd or "status"
 
     if cmd == "init-config":
-        with open(args.path, "w", encoding="utf-8") as f:
+        target = args.path or os.path.join(kis_home(), "config.json")
+        os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+        with open(target, "w", encoding="utf-8") as f:
             json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
-        print(f"已生成配置模板: {args.path}")
+        print(f"已生成配置模板: {target}")
         return 0
 
     if cmd == "mcp":

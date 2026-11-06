@@ -39,7 +39,7 @@ kingdee-kis-connector/
 ```
 KingDeeFlagship_MCP/
 ├── src/                    # 源代码根目录
-│   └── kingdee_mcp/       # 主包（遵循 src layout）
+│   └── kingdeeflagship_mcp/       # 主包（遵循 src layout）
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── mcp_server.py
@@ -73,9 +73,9 @@ KingDeeFlagship_MCP/
 ## 主要变更
 
 ### 1. 包结构变更
-- **包名**：`kis_connector` → `kingdee_mcp`
-- **布局**：根目录包 → src layout（`src/kingdee_mcp/`）
-- **入口**：添加了 `__main__.py` 支持 `python -m kingdee_mcp`
+- **包名**：`kis_connector` → `kingdeeflagship_mcp`
+- **布局**：根目录包 → src layout（`src/kingdeeflagship_mcp/`）
+- **入口**：添加了 `__main__.py` 支持 `python -m kingdeeflagship_mcp`
 
 ### 2. 配置管理
 - **依赖声明**：`requirements.txt` → `pyproject.toml`
@@ -83,8 +83,8 @@ KingDeeFlagship_MCP/
 - **配置文件**：提供了 `config.example.json` 示例
 
 ### 3. 命令行工具
-- **安装后命令**：`kingdee-mcp` 作为全局命令
-- **模块调用**：`python -m kingdee_mcp` 同样支持
+- **安装后命令**：`kingdeeflagship-mcp` 作为全局命令
+- **模块调用**：`python -m kingdeeflagship_mcp` 同样支持
 
 ### 4. 文档完善
 - `README.md` - 项目介绍、快速开始、功能说明
@@ -108,8 +108,8 @@ from kis_connector import KISConnector
 from kis_connector.config import Config
 
 # 新代码
-from kingdee_mcp import KISConnector
-from kingdee_mcp.config import Config
+from kingdeeflagship_mcp import KISConnector
+from kingdeeflagship_mcp.config import Config
 ```
 
 ### 后端工厂
@@ -142,13 +142,13 @@ pip install -e .
 ### 使用命令
 ```bash
 # 查看状态
-kingdee-mcp status
+kingdeeflagship-mcp status
 
 # 或者使用模块方式
-python -m kingdee_mcp status
+python -m kingdeeflagship_mcp status
 
 # MCP 服务器模式
-python -m kingdee_mcp mcp
+python -m kingdeeflagship_mcp mcp
 ```
 
 ## 配置 MCP 客户端
@@ -161,7 +161,7 @@ python -m kingdee_mcp mcp
   "mcpServers": {
     "kingdee-kis": {
       "command": "E:\\path\\to\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdee_mcp", "mcp"],
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
       "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
       "env": {
         "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"

@@ -2,8 +2,8 @@
 """MCP 服务器（stdio / JSON-RPC 2.0）—— 零第三方依赖，WorkBuddy 与 KimiWork 桌面版通用。
 
 启动：
-    python -m kingdee_mcp mcp
-    python -m kingdee_mcp mcp --config D:/kis/config.json
+    python -m kingdeeflagship_mcp mcp
+    python -m kingdeeflagship_mcp mcp --config D:/kis/config.json
 
 协议实现（不依赖 mcp 包，避免目标机还要装依赖）：
     initialize / notifications/initialized / tools/list / tools/call
@@ -28,7 +28,7 @@ from .tasklog import TaskLogger
 
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
-SERVER_INFO = {"name": "kingdee-flagship-mcp", "version": __version__}
+SERVER_INFO = {"name": "kingdeeflagship_mcp", "version": __version__}
 MAX_TEXT = 40000
 
 # ------------------------------------------------------------------ 工具定义
@@ -535,7 +535,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     ensure_utf8_stdio()
     p = argparse.ArgumentParser(prog="kis-mcp", description="金蝶 KIS 旗舰版 MCP 服务器(stdio)")
-    p.add_argument("--config", default=None, help="配置文件路径（默认读环境变量 KIS_CONFIG 或当前目录 config.json）")
+    p.add_argument("--config", default=None, help="配置文件路径（默认读环境变量 KIS_CONFIG 或用户数据目录 config.json）")
     p.add_argument("--self-test", action="store_true", help="执行一次内置自检后退出")
     ns = p.parse_args(argv)
     server = MCPServer(config_path=ns.config)
