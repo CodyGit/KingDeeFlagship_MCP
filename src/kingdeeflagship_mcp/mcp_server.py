@@ -381,8 +381,6 @@ def _call_tool(kis: KISConnector, name: str, args: Dict[str, Any]) -> Any:
         return {"account_sets": kis.account_sets()}
     if name == "kis_period":
         return kis.get_period(a["date"]).to_dict()
-    if name == "kis_com_invoke":
-        return kis.com_invoke(a["progid"], a["method"], *list(a.get("args") or []))
     if name == "kis_memory":
         action = a.get("action", "list")
         mem = kis.memory

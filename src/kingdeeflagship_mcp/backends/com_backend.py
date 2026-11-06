@@ -21,7 +21,7 @@ from ..config import Config
 from ..errors import BackendUnavailable, NotSupported, WriteDenied
 from ..models import PageResult, Query
 from ..schema import get_entity
-from ..sqlbuilder import build_count, build_read, build_read_entries, build_select
+from ..sqlbuilder import has_multiple_statements, build_count, build_read, build_read_entries, build_select
 from .base import Backend
 
 try:  # 注册表扫描不需要 pywin32
@@ -347,6 +347,12 @@ class COMBackend(Backend):
             raise WriteDenied(
                 f"只允许执行 {allowed} 开头的语句（只读模式）",
                 hint="当前连接器仅支持只读操作",
+            )
+        if has_multiple_statements(s):
+            self._log("sql_denied", op="raw_sql", sql_prefix=prefix, reason="多语句")
+            raise WriteDenied(
+                "只允许执行单条语句",
+                hint="去掉语句中间的分号，一次只提交一条 SELECT/WITH 语句",
             )
         self._log("sql_execute", op="raw_sql", sql_prefix=prefix)
         max_rows = int(self.config.get("max_page_size", 2000))

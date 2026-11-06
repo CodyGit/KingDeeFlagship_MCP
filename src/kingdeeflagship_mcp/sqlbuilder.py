@@ -14,6 +14,16 @@ _IDENT = re.compile(r"^[\w一-龥]+(\.[\w一-龥]+)?$", re.UNICODE)
 _ORDER = re.compile(r"^[\w一-龥]+(\.[\w一-龥]+)?(\s+(ASC|DESC))?$", re.I | re.UNICODE)
 
 
+# 字符串字面量 / 方括号标识符 / 行注释 / 块注释：其中的分号不是语句分隔符
+_SQL_QUOTED = re.compile(r"'(?:[^']|'')*'|\[[^\]]*\]|--[^\n]*|/\*.*?\*/", re.S)
+
+
+# description: 判断 SQL 是否含多条语句（去掉字面量与注释后仍有分号且后面还有内容）
+def has_multiple_statements(sql: str) -> bool:
+    stripped = _SQL_QUOTED.sub(" ", sql).strip().rstrip(";").rstrip()
+    return ";" in stripped
+
+
 def safe_ident(name: str) -> str:
     n = str(name).strip()
     if n == "*":

@@ -60,6 +60,7 @@ src/kingdeeflagship_mcp/
 config/config.example.json   配置示例（实际配置在用户数据目录）
 templates/export_task.py     批量导出一次性脚本模板
 docs/                        设计文档
+tests/                       单元测试（unittest）
 ```
 
 ## 4. 关键流程
@@ -99,7 +100,7 @@ docs/                        设计文档
 
 ### 4.4 原始 SQL
 
-`kis_raw_sql` → `COMBackend.raw_sql`：取首个单词，不在 `allow_sql_prefixes`（默认 `select`、`with`）内则抛 `WriteDenied`。结果受 `max_page_size`（默认 2000）截断，截断时返回 warning。
+`kis_raw_sql` → `COMBackend.raw_sql`：先取首个单词，不在 `allow_sql_prefixes`（默认 `select`、`with`）内则抛 `WriteDenied`；再用 `sqlbuilder.has_multiple_statements` 检测多语句（先剔除字符串字面量、`[标识符]`、`--` 和 `/* */` 注释，剔除末尾分号后仍含分号即判为多语句），命中同样抛 `WriteDenied`。结果受 `max_page_size`（默认 2000）截断，截断时返回 warning。
 
 ### 4.5 多主体（多账套）
 
@@ -229,17 +230,21 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
               '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | python -m kingdeeflagship_mcp mcp
 ```
 
-测试时设 `KIS_HOME` 指向临时目录，避免污染真实数据。COM 登录与查询必须在装有金蝶客户端的机器上用 32 位 Python 手工验证。目前没有自动化测试。
+单元测试用标准库 `unittest`，不依赖 COM 和金蝶客户端，任意机器可跑：
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+测试时设 `KIS_HOME` 指向临时目录，避免污染真实数据。COM 登录与查询必须在装有金蝶客户端的机器上用 32 位 Python 手工验证。
 
 ## 11. 已知问题
 
 | 问题 | 位置 | 说明 |
 |---|---|---|
-| 死代码 | `mcp_server._call_tool` 的 `kis_com_invoke` 分支 | `KISConnector` 没有 `com_invoke`，工具也未注册，实际不可达；该清理 |
-| `raw_sql` 只校验首个单词 | `COMBackend.raw_sql` | `SELECT 1; DROP TABLE x` 这类多语句不会被拦。ADODB 单次执行是否接受多语句取决于驱动，不应依赖。建议加分号检测 |
 | 进程退出段错误 | 老 COM 组件释放顺序 | 不影响单次取数；常驻模式由连接器统一管理生命周期 |
 | `likely` 实体 | `schema.py` | 42 个实体的表结构未在所有版本验证，上线前先 `kis_discover --check-tables` |
-| 无自动化测试 | — | 见第 10 节 |
+| 自动化测试很少 | `tests/` | 目前只覆盖 `raw_sql` 的拒绝逻辑，登录、查询链路依赖真机 COM，没有自动化 |
 | 版本号 | — | 唯一来源是 `__init__.__version__`；`pyproject.toml` 的 version 需同步手改 |
 
 ## 12. writable 分支差异

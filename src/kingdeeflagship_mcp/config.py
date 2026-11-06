@@ -40,7 +40,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "user": "",
         "password": "",                   # 不建议明文写在这里；用 store-cred 存 DPAPI 加密凭据
         "acct_id": "",                    # 静默登录时选择的目标账套（cred 存储键之一）
-        # 业务组件 ProgID 映射（不同版本差异大，按需填写后即可用 com_invoke 调用）
+        # 业务组件 ProgID 映射（不同版本差异大；main 分支只读，此项仅 writable 分支的写入使用）
         "component_progids": {},
         # ADODB 连接/命令超时（秒）
         "ado_timeout": 30,
