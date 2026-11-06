@@ -83,7 +83,7 @@ def _set_path(cfg: Dict[str, Any], path: str, value: Any) -> None:
 
 # description: 用户数据目录（配置/凭据/记忆/日志），插件升级覆盖程序目录时不受影响
 def kis_home() -> str:
-    """用户数据目录：环境变量 KIS_HOME > %LOCALAPPDATA%\\kingdee-kis-connector。
+    """用户数据目录：环境变量 KIS_HOME > %LOCALAPPDATA%\\kingdee-flagship-mcp。
 
     放 LOCALAPPDATA 而非 APPDATA：cred.bin 由 DPAPI 绑定本机+本用户，漫游到其它机器也无法解密。
     """
@@ -91,7 +91,7 @@ def kis_home() -> str:
     if env:
         return env
     base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "kingdee-kis-connector")
+    return os.path.join(base, "kingdee-flagship-mcp")
 
 
 def resolve_config_path(path: Optional[str] = None) -> str:
@@ -114,7 +114,8 @@ def resolve_config_path(path: Optional[str] = None) -> str:
     user_cfg = os.path.join(kis_home(), "config.json")
     if os.path.exists(user_cfg):
         return user_cfg
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # 仓库根目录：src/kingdee_mcp/config.py 向上三级（插件包内不打包 config/，此项自然跳过）
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     bundled = os.path.join(root, "config", "config.json")
     if os.path.exists(bundled):
         return bundled

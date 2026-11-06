@@ -9,9 +9,9 @@
     - 明文密码只在内存中短暂存在，不写入任何配置/日志文件。
 
 使用（在目标机器的控制台手工执行，避免密码经聊天通道传输）：
-    python -m kis_connector store-cred            # 交互输入金蝶账号+密码（不回显）
-    python -m kis_connector list-cred             # 查看已存的凭据（脱敏）
-    python -m kis_connector del-cred --key default
+    python -m kingdee_mcp store-cred            # 交互输入金蝶账号+密码（不回显）
+    python -m kingdee_mcp list-cred             # 查看已存的凭据（脱敏）
+    python -m kingdee_mcp del-cred --key default
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def dpapi_encrypt(data: bytes, entropy: Optional[bytes] = None) -> bytes:
     try:
         import win32crypt  # noqa: PLC0415
 
-        desc = "kingdee-kis-connector credential"
+        desc = "kingdee-flagship-mcp credential"
         flags = 0x0  # CRYPTPROTECT_DEFAULT
         blob = win32crypt.CryptProtectData(data, desc, entropy, None, None, flags)
         return blob
@@ -86,7 +86,7 @@ def _dpapi_ctypes(data: bytes, entropy: Optional[bytes], protect: bool) -> bytes
 
     if protect:
         ok = crypt32.CryptProtectData(
-            ctypes.byref(in_blob), "kingdee-kis-connector", ent_ptr, None, None, 0,
+            ctypes.byref(in_blob), "kingdee-flagship-mcp", ent_ptr, None, None, 0,
             ctypes.byref(out_blob))
     else:
         ok = crypt32.CryptUnprotectData(

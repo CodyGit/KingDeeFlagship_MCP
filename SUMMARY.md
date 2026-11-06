@@ -263,7 +263,7 @@ from kingdee_mcp import KISConnector
 
 ## 🎉 总结
 
-已成功将 `kingdee-kis-connector` 重构为标准的 MCP 工程 `KingDeeFlagship_MCP`：
+已成功将 `kingdee-flagship-mcp` 重构为标准的 MCP 工程 `KingDeeFlagship_MCP`：
 
 - ✅ 代码完整迁移（零损失）
 - ✅ 结构符合 Python 标准
@@ -276,6 +276,6 @@ from kingdee_mcp import KISConnector
 ---
 
 生成时间：2026-11-06 14:30  
-重构版本：v2.0.0  
-原项目：kingdee-kis-connector  
+重构版本：v1.0.0  
+原项目：kingdee-flagship-mcp  
 新项目：KingDeeFlagship_MCP

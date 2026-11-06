@@ -10,6 +10,7 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+from . import __version__
 from .backends import create
 from .backends.base import Backend
 from .config import Config
@@ -38,7 +39,7 @@ def _mask(cfg: Any) -> Any:
 class KISConnector:
     """金蝶 KIS 旗舰版连接器。
 
-    >>> from kis_connector import KISConnector
+    >>> from kingdee_mcp import KISConnector
     >>> kis = KISConnector()
     >>> kis.connect()                       # COM 登录（弹金蝶登录窗）
     >>> kis.query("customer", keyword="科技", limit=20)
@@ -460,7 +461,7 @@ class KISConnector:
             cred_keys = []
         log_path = getattr(self.logger, "path", "") if self.logger else ""
         return {
-            "version": "1.1.0",
+            "version": __version__,
             "mode": self.config.get("mode"),
             "backend_order": self._order(),
             "active_backend": self.backend_name,

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """命令行入口：配置初始化 / 环境探测 / 查询取数 / MCP 服务器。
 
-    python -m kis_connector discover
-    python -m kis_connector status
-    python -m kis_connector entities --module finance
-    python -m kis_connector query customer --keyword 科技 --limit 20
-    python -m kis_connector read voucher 1001
-    python -m kis_connector sql "SELECT TOP 10 * FROM t_Account"
-    python -m kis_connector mcp
+    python -m kingdee_mcp discover
+    python -m kingdee_mcp status
+    python -m kingdee_mcp entities --module finance
+    python -m kingdee_mcp query customer --keyword 科技 --limit 20
+    python -m kingdee_mcp read voucher 1001
+    python -m kingdee_mcp sql "SELECT TOP 10 * FROM t_Account"
+    python -m kingdee_mcp mcp
 """
 
 from __future__ import annotations

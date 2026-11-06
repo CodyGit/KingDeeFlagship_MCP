@@ -3,7 +3,7 @@
 ## 🎯 项目信息
 
 - **项目名称**: KingDeeFlagship_MCP
-- **版本**: v2.0.0
+- **版本**: v1.0.0
 - **作者**: Cody
 - **许可证**: MIT License
 - **类型**: 第三方 MCP 服务器（非金蝶官方）
@@ -192,7 +192,7 @@ python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"
 
 ## 📝 更新日志
 
-### v2.0.0 (2026-11-06)
+### v1.0.0 (2026-11-06)
 - ✅ 重构为标准 MCP 工程
 - ✅ 采用 src layout
 - ✅ 使用 pyproject.toml

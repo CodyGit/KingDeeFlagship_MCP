@@ -2,8 +2,8 @@
 """MCP 服务器（stdio / JSON-RPC 2.0）—— 零第三方依赖，WorkBuddy 与 KimiWork 桌面版通用。
 
 启动：
-    python -m kis_connector mcp
-    python -m kis_connector mcp --config D:/kis/config.json
+    python -m kingdee_mcp mcp
+    python -m kingdee_mcp mcp --config D:/kis/config.json
 
 协议实现（不依赖 mcp 包，避免目标机还要装依赖）：
     initialize / notifications/initialized / tools/list / tools/call
@@ -18,6 +18,7 @@ import sys
 import traceback
 from typing import Any, Dict, List, Optional
 
+from . import __version__
 from .config import Config
 from .errors import KISError
 from .models import PageResult
@@ -27,7 +28,7 @@ from .tasklog import TaskLogger
 
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
-SERVER_INFO = {"name": "kingdee-kis-connector", "version": "1.0.0"}
+SERVER_INFO = {"name": "kingdee-flagship-mcp", "version": __version__}
 MAX_TEXT = 40000
 
 # ------------------------------------------------------------------ 工具定义

@@ -21,10 +21,12 @@ import csv
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 仓库布局包在 src/ 下；插件包布局 app/ 下直接是包
+sys.path.insert(0, os.path.join(_ROOT, "src") if os.path.isdir(os.path.join(_ROOT, "src")) else _ROOT)
 
-from kis_connector.mcp_server import ensure_utf8_stdio  # noqa: E402
-from kis_connector.service import KISConnector  # noqa: E402
+from kingdee_mcp.mcp_server import ensure_utf8_stdio  # noqa: E402
+from kingdee_mcp.service import KISConnector  # noqa: E402
 
 
 def resolve_account(config_path=None) -> str:
