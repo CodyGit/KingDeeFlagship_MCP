@@ -166,9 +166,19 @@ if ($r.Code -eq 0) { Write-Host '    检测到金蝶登录组件 K3Login' }
 else { Write-Host '    [提示] 本机未检测到金蝶登录组件 K3Login，连接账套前需要先安装金蝶 KIS 客户端' -ForegroundColor Yellow }
 
 # ---------------------------------------------------------------- 5. 配置片段
-$entry = [ordered]@{ command = $VenvPy; args = @('-m', 'kingdeeflagship_mcp', 'mcp') }
-$cfg   = [ordered]@{ mcpServers = [ordered]@{ 'kingdee-kis' = $entry } }
-$json  = $cfg | ConvertTo-Json -Depth 5
+# Windows PowerShell 5.1 的 ConvertTo-Json 固定 4 空格缩进且冒号后有多余空格，无法调整，所以这里手工拼 2 空格缩进的 JSON
+# 值里只需转义反斜杠和双引号（路径只会出现这两种需要转义的字符）
+$cmdJson = $VenvPy.Replace('\', '\\').Replace('"', '\"')
+$json = @(
+    '{',
+    '  "mcpServers": {',
+    '    "kingdee-kis": {',
+    ('      "command": "' + $cmdJson + '",'),
+    '      "args": ["-m", "kingdeeflagship_mcp", "mcp"]',
+    '    }',
+    '  }',
+    '}'
+) -join [Environment]::NewLine
 $out   = Join-Path $Root 'build\mcp-config.json'
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $out) | Out-Null
 [IO.File]::WriteAllText($out, $json, (New-Object System.Text.UTF8Encoding($false)))
