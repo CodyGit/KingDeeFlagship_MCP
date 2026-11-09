@@ -58,8 +58,9 @@ src/kingdeeflagship_mcp/
     ├── base.py       Backend 抽象基类、能力声明
     └── com_backend.py  COM 后端（登录、查询、枚举账套）
 config/config.example.json   配置示例（实际配置在用户数据目录）
-templates/export_task.py     批量导出一次性脚本模板
-docs/                        设计文档
+scripts/setup.bat, setup.ps1 环境初始化（32 位 Python、.venv32、依赖、Agent 配置片段）
+scripts/export_task.py       批量导出一次性脚本模板
+docs/                        文档（本文件、使用指南、Kimi 插件设计、重构记录）
 tests/                       单元测试（unittest）
 ```
 
@@ -207,18 +208,18 @@ main 分支只读由三层保证：没有写入工具；`raw_sql` 前缀白名�
 
 ## 9. 任务通道约定
 
-- 批量取数/导出统一走一次性脚本进程（`templates/export_task.py`）：连接、查询、落盘在一个进程内完成，至多登录一次。MCP 只用于轻量查询
+- 批量取数/导出统一走一次性脚本进程（`scripts/export_task.py`）：连接、查询、落盘在一个进程内完成，至多登录一次。MCP 只用于轻量查询
 - 同一任务只用一个通道，避免重复登录
 - 目标账套用环境变量 `KIS_ACCT_ID` 指定
 
 ## 10. 开发与验证
 
-### 10.1 环境初始化（setup.bat）
+### 10.1 环境初始化（scripts\setup.bat）
 
 ```bash
-setup.bat                 # 等价于 powershell -File scripts\setup.ps1
-setup.bat -Recreate       # 重建 .venv32
-setup.bat -PythonExe C:\path\python.exe
+scripts\setup.bat                 # 等价于 powershell -File scripts\setup.ps1
+scripts\setup.bat -Recreate       # 重建 .venv32
+scripts\setup.bat -PythonExe C:\path\python.exe
 ```
 
 维护 `scripts/setup.ps1` 时注意：

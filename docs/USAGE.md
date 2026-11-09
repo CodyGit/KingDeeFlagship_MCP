@@ -4,7 +4,7 @@
 
 - Windows 系统
 - 本机已安装金蝶 KIS 旗舰版客户端并能正常登录（`K3LOGIN.DLL` 随客户端注册）
-- 不需要自己装 Python：金蝶的登录组件是 32 位 COM，`setup.bat` 会自动找到或下载 32 位 Python
+- 不需要自己装 Python：金蝶的登录组件是 32 位 COM，`scripts\setup.bat` 会自动找到或下载 32 位 Python
 
 ## 二、安装配置
 
@@ -13,7 +13,7 @@
 ```bash
 git clone <仓库地址>
 cd KingDeeFlagship_MCP
-setup.bat
+scripts\setup.bat
 ```
 
 脚本依次完成：
@@ -24,8 +24,8 @@ setup.bat
 4. 自检：确认 32 位、pywin32 可用、MCP 服务能启动、本机是否有金蝶登录组件
 5. 打印桌面 Agent 要用的 MCP 配置，并保存到 `build\mcp-config.json`
 
-可以重复运行。常用参数：`setup.bat -Recreate` 删除并重建虚拟环境，`setup.bat -PythonExe C:\path\python.exe` 指定自己的 32 位 Python。
-`build\py32` 是虚拟环境的基础解释器，不要删除；误删后重新运行 `setup.bat` 即可修复。
+可以重复运行。常用参数：`scripts\setup.bat -Recreate` 删除并重建虚拟环境，`scripts\setup.bat -PythonExe C:\path\python.exe` 指定自己的 32 位 Python。
+`build\py32` 是虚拟环境的基础解释器，不要删除；误删后重新运行 `scripts\setup.bat` 即可修复。
 
 结束时若提示「未检测到金蝶登录组件 K3Login」，说明本机没装金蝶客户端，装好后才能连接账套，其余功能不受影响。
 
@@ -89,7 +89,7 @@ kingdeeflagship-mcp discover --check-tables
 
 ### 4.1 合并配置
 
-`setup.bat` 结束时会打印配置，同样内容保存在 `build\mcp-config.json`。把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`，不要整个文件覆盖：
+`scripts\setup.bat` 结束时会打印配置，同样内容保存在 `build\mcp-config.json`。把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`，不要整个文件覆盖：
 
 ```json
 {
@@ -116,7 +116,7 @@ kingdeeflagship-mcp discover --check-tables
 
 ### 4.3 项目目录被移动或改名
 
-在新位置运行 `setup.bat -Recreate` 重建虚拟环境，再更新 Agent 配置里的路径。
+在新位置运行 `scripts\setup.bat -Recreate` 重建虚拟环境，再更新 Agent 配置里的路径。
 
 ## 五、高级配置
 

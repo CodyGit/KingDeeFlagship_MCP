@@ -16,7 +16,7 @@
 ## 系统要求
 
 - **操作系统**：Windows（金蝶客户端仅支持 Windows）
-- **Python**：必须 32 位（K3LOGIN.DLL 是 32 位 COM 组件）。无需自备，`setup.bat` 会自动查找或下载
+- **Python**：必须 32 位（K3LOGIN.DLL 是 32 位 COM 组件）。无需自备，`scripts\setup.bat` 会自动查找或下载
 - **金蝶客户端**：KIS 旗舰版 / K3 WISE（需本机已安装）
 - **依赖**：pywin32（COM 组件调用）、openpyxl（导出 Excel）
 
@@ -27,7 +27,7 @@
 ```bash
 git clone https://github.com/CodyGit/KingDeeFlagship_MCP.git
 cd KingDeeFlagship_MCP
-setup.bat
+scripts\setup.bat
 ```
 
 脚本依次完成：
@@ -38,12 +38,12 @@ setup.bat
 4. 自检：确认 32 位、pywin32 可用、MCP 服务能启动、本机是否有金蝶登录组件
 5. 打印桌面 Agent 要用的 MCP 配置，并保存到 `build\mcp-config.json`
 
-可以重复运行。常用参数：`setup.bat -Recreate` 删除并重建虚拟环境，`setup.bat -PythonExe C:\path\python.exe` 指定自己的 32 位 Python。
-`build\py32` 是虚拟环境的基础解释器，不要删除；误删后重新运行 `setup.bat` 即可修复。
+可以重复运行。常用参数：`scripts\setup.bat -Recreate` 删除并重建虚拟环境，`scripts\setup.bat -PythonExe C:\path\python.exe` 指定自己的 32 位 Python。
+`build\py32` 是虚拟环境的基础解释器，不要删除；误删后重新运行 `scripts\setup.bat` 即可修复。
 
 ### 2. 关联桌面 Agent
 
-`setup.bat` 结束时会打印配置，把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`（不要整个文件覆盖，以免丢掉已有的其它 MCP），然后重启 Agent：
+`scripts\setup.bat` 结束时会打印配置，把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`（不要整个文件覆盖，以免丢掉已有的其它 MCP），然后重启 Agent：
 
 ```json
 {
@@ -56,7 +56,7 @@ setup.bat
 }
 ```
 
-`<项目目录>` 是你克隆的位置，使用 `setup.bat` 打印的真实路径即可，不需要 `cwd` 和 `PYTHONPATH`。
+`<项目目录>` 是你克隆的位置，使用 `scripts\setup.bat` 打印的真实路径即可，不需要 `cwd` 和 `PYTHONPATH`。
 
 | Agent | 配置文件 |
 |---|---|
@@ -64,7 +64,7 @@ setup.bat
 | WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
 | Kimi 桌面版 | 通过插件清单接入，见仓库 `kimi` 分支 |
 
-项目目录被移动或改名后，在新位置运行 `setup.bat -Recreate`，并更新 Agent 配置里的路径。
+项目目录被移动或改名后，在新位置运行 `scripts\setup.bat -Recreate`，并更新 Agent 配置里的路径。
 
 ### 3. 配置（可选）
 
@@ -108,9 +108,10 @@ setup.bat
 
 ```
 KingDeeFlagship_MCP/
-├── setup.bat                 # 初始化入口（调用 scripts/setup.ps1）
 ├── scripts/
-│   └── setup.ps1             # 准备 32 位 Python、创建 .venv32、安装依赖
+│   ├── setup.bat             # 初始化入口（调用同目录的 setup.ps1）
+│   ├── setup.ps1             # 准备 32 位 Python、创建 .venv32、安装依赖
+│   └── export_task.py        # 批量导出一次性脚本模板
 ├── src/
 │   └── kingdeeflagship_mcp/          # 主包
 │       ├── __init__.py
@@ -133,9 +134,8 @@ KingDeeFlagship_MCP/
 │           └── com_backend.py
 ├── config/
 │   └── config.example.json   # 示例配置（实际配置在用户数据目录）
-├── templates/
-│   └── export_task.py        # 批量导出模板
-├── tests/                    # 测试（待添加）
+├── docs/                     # 文档（设计、使用指南、重构记录）
+├── tests/                    # 单元测试（unittest）
 ├── pyproject.toml            # 项目配置
 ├── README.md
 ├── LICENSE
@@ -214,7 +214,7 @@ KingDeeFlagship_MCP/
 
 - `docs/design.md`：项目设计文档（架构、流程、配置、扩展方式、已知问题）
 - `docs/kimi-plugin-design.md`：Kimi 桌面端插件打包设计
-- `USAGE.md`：安装与使用指南
+- `docs/USAGE.md`：安装与使用指南
 
 ## 许可证
 

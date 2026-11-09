@@ -56,14 +56,15 @@ KingDeeFlagship_MCP/
 │           └── com_backend.py
 ├── config/
 │   └── config.example.json
-├── templates/
+├── scripts/
 │   └── export_task.py
+├── docs/
+│   ├── USAGE.md            # 使用指南
+│   └── MIGRATION.md        # 本文件
 ├── pyproject.toml          # 项目配置（替代 setup.py 和 requirements.txt）
 ├── README.md               # 项目说明
-├── USAGE.md                # 使用指南
 ├── LICENSE                 # MIT 许可证
-├── .gitignore
-└── MIGRATION.md            # 本文件
+└── .gitignore
 ```
 
 ## 主要变更
@@ -84,9 +85,9 @@ KingDeeFlagship_MCP/
 
 ### 4. 文档完善
 - `README.md` - 项目介绍、快速开始、功能说明
-- `USAGE.md` - 详细的使用指南（环境准备、配置、测试、部署）
+- `docs/USAGE.md` - 详细的使用指南（环境准备、配置、测试、部署）
 - `LICENSE` - MIT 许可证
-- `MIGRATION.md` - 本迁移说明
+- `docs/MIGRATION.md` - 本迁移说明
 
 ### 5. 移除的内容
 - `packaging/` - 打包脚本（暂不需要）

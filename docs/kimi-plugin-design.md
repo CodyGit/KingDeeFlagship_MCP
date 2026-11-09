@@ -47,7 +47,7 @@ KingDeeFlagship_MCP/
 1. 下载并 SHA256 校验 `python-3.11.9-embed-win32.zip`、`pywin32-311-cp311-cp311-win32.whl`（缓存到 `build/cache/`）
 2. 解压运行时，pywin32 只保留 `win32/ win32com/ pythoncom.py`，两个 DLL 放到 `python.exe` 旁
 3. 写 `python311._pth`：`python311.zip` / `.` / `Lib\site-packages` / `win32` / `win32\lib` / `..\app`
-4. 复制 `src/kingdeeflagship_mcp`、`templates/` 到 `app/`（排除 `__pycache__`）
+4. 复制 `src/kingdeeflagship_mcp` 到 `app/`，并把 `scripts/export_task.py` 复制为 `app/templates/export_task.py`（排除 `__pycache__`）
 5. 读 `kingdeeflagship_mcp.__version__` 注入清单 `version`
 6. 复制清单、locales、icon、SKILL.md，产出 `dist/kimi/kingdee-kis/`
 

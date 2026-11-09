@@ -3,7 +3,7 @@ r"""一次性批量任务模板：单通道、单次登录、全程日志。
 
 用法（在 <项目根目录> 下用 32 位 venv 执行）：
     set KIS_ACCT_ID=AIS00000000000000
-    .venv32\Scripts\python.exe templates\export_task.py --task 导出示例项目采购 --sql-file q.sql --out out\detail.csv
+    .venv32\Scripts\python.exe scripts\export_task.py --task 导出示例项目采购 --sql-file q.sql --out out\detail.csv
 
 或直接修改本文件底部的 run(kis, args) 实现具体取数逻辑。
 

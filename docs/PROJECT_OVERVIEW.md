@@ -33,13 +33,14 @@ KingDeeFlagship_MCP/
 │       └── com_backend.py  # COM实现
 ├── config/
 │   └── config.example.json # 配置示例
-├── templates/
+├── scripts/
 │   └── export_task.py      # 批量导出模板
+├── docs/
+│   ├── USAGE.md            # 使用指南
+│   ├── MIGRATION.md        # 迁移说明
+│   └── SUMMARY.md          # 重构总结
 ├── pyproject.toml          # 项目配置
 ├── README.md               # 项目说明
-├── USAGE.md                # 使用指南
-├── MIGRATION.md            # 迁移说明
-├── SUMMARY.md              # 重构总结
 └── LICENSE                 # MIT许可证
 
 总计: 26个文件, 5037行代码
@@ -131,9 +132,9 @@ kingdeeflagship-mcp query customer --limit 5
 ## 📚 文档
 
 - **README.md** - 项目介绍和快速开始
-- **USAGE.md** - 详细使用指南（10章节）
-- **MIGRATION.md** - 从旧项目迁移说明
-- **SUMMARY.md** - 重构完成总结
+- **docs/USAGE.md** - 详细使用指南（10章节）
+- **docs/MIGRATION.md** - 从旧项目迁移说明
+- **docs/SUMMARY.md** - 重构完成总结
 
 ## 🛠️ MCP 工具（24个）
 

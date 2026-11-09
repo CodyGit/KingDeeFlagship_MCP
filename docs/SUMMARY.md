@@ -29,12 +29,13 @@ KingDeeFlagship_MCP/
 │       └── com_backend.py  # COM实现
 ├── config/
 │   └── config.example.json # 配置示例
-├── templates/
+├── scripts/
 │   └── export_task.py      # 批量导出模板
+├── docs/
+│   ├── USAGE.md            # 详细使用指南
+│   └── MIGRATION.md        # 迁移说明
 ├── pyproject.toml          # 项目配置
 ├── README.md               # 项目说明
-├── USAGE.md                # 详细使用指南
-├── MIGRATION.md            # 迁移说明
 ├── LICENSE                 # MIT许可证
 └── .gitignore              # Git忽略规则
 ```
@@ -65,8 +66,8 @@ KingDeeFlagship_MCP/
 ### 4. 文档完善 ✅
 
 - **README.md** - 项目介绍、快速开始、目录结构、MCP工具列表
-- **USAGE.md** - 详细使用指南（10个章节，7000+字）
-- **MIGRATION.md** - 迁移说明和对比
+- **docs/USAGE.md** - 详细使用指南（10个章节，7000+字）
+- **docs/MIGRATION.md** - 迁移说明和对比
 - **LICENSE** - MIT许可证
 
 ### 5. Git 版本控制 ✅
