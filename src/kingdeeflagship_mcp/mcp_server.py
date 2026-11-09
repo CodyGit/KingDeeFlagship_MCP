@@ -29,7 +29,7 @@ from .tasklog import TaskLogger
 
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
-SERVER_INSTRUCTIONS = "金蝶 KIS 连接器（只读模式）：所有查询操作可直接调用；多任务先 kis_subject.resolve 确定账套（歧义时向用户确认后 map 记录）；批量导出用 kis_export 直接生成 CSV 文件，不要把大量明细读进对话；更复杂的批量任务再走一次性脚本通道（每任务仅登录一次）；写 SQL 前不要猜列名，优先用 kis_raw_sql 描述里列出的已验证列，其余先查 INFORMATION_SCHEMA.COLUMNS；纠错用 kis_memory（可撤销），排错用 kis_logs。注意：此连接器仅支持读取操作，不支持任何写入或修改操作。"
+SERVER_INSTRUCTIONS = "金蝶 KIS 连接器（只读模式）：所有查询操作可直接调用；多任务先 kis_subject.resolve 确定账套（歧义时向用户确认后 map 记录）；批量导出用 kis_export 直接生成 Excel 文件，不要把大量明细读进对话；更复杂的批量任务再走一次性脚本通道（每任务仅登录一次）；写 SQL 前不要猜列名，优先用 kis_raw_sql 描述里列出的已验证列，其余先查 INFORMATION_SCHEMA.COLUMNS；只需核对数量或金额时用 SUM/COUNT/GROUP BY 在 SQL 中聚合，不要读取全部明细；纠错用 kis_memory（可撤销），排错用 kis_logs。注意：此连接器仅支持读取操作，不支持任何写入或修改操作。"
 
 SERVER_INFO = {"name": "kingdeeflagship_mcp", "version": __version__}
 MAX_TEXT = 40000
@@ -120,7 +120,8 @@ TOOLS: List[Dict[str, Any]] = [
                        "ICStockBill(FInterID,FTranType,FBillNo,FDate,FSupplyID,FUse,FExplanation)；"
                        "ICStockBillEntry(FInterID,FItemID,FQty,FPrice,FAmount)；"
                        "t_ICItem(FItemID,FNumber,FName,FModel)；t_Supplier与t_Organization(FItemID,FName)。"
-                       "其余列先查 INFORMATION_SCHEMA.COLUMNS。需要导出大量明细时用 kis_export，不要把行数据读进对话。",
+                       "其余列先查 INFORMATION_SCHEMA.COLUMNS。只需核对数量或金额时，用 SUM/COUNT/GROUP BY 在 SQL 中聚合，不要把全部明细读进对话；"
+                       "需要导出大量明细时用 kis_export。",
         "inputSchema": {
             "type": "object",
             "properties": {"sql": {"type": "string"}, "params": {"type": "array", "items": {}}},
@@ -130,17 +131,33 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "kis_export",
-        "description": "执行只读 SQL 并把结果写成 CSV 文件（UTF-8 带 BOM，Excel 可直接打开）保存到导出目录；"
-                       "对话中只返回文件路径、行数、列名和前几行预览。需先用 kis_output 确认导出目录。",
+        "description": "执行只读 SQL 并把结果写成 Excel 文件（.xlsx）保存到导出目录；"
+                       "一个文件可含多个工作表（sheets，每项 name+sql），适合把汇总、明细、出入库分页放进同一份 Excel；"
+                       "SQL 的列别名就是 Excel 表头，每列须有唯一的中文别名（如 h.FBillNo AS 订单号）；"
+                       "说明、汇总等文字页可用 SELECT 常量 UNION ALL 生成；"
+                       "对话中只返回文件路径、各工作表行数、列名和前几行预览。需先用 kis_output 确认导出目录。",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "sql": {"type": "string"},
+                "sql": {"type": "string", "description": "单表导出；与 sheets 二选一"},
                 "params": {"type": "array", "items": {}},
-                "filename": {"type": "string", "description": "可选，文件名（自动补 .csv，重名会加序号）"},
+                "sheets": {
+                    "type": "array",
+                    "description": "多工作表导出；与 sql 二选一",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "工作表名（至多 31 字符）"},
+                            "sql": {"type": "string"},
+                            "params": {"type": "array", "items": {}},
+                        },
+                        "required": ["sql"],
+                        "additionalProperties": False,
+                    },
+                },
+                "filename": {"type": "string", "description": "可选，文件名（自动补 .xlsx，重名会加序号）"},
                 "keyword": {"type": "string", "description": "可选：项目关键词，用于匹配专属导出目录"},
             },
-            "required": ["sql"],
             "additionalProperties": False,
         },
     },
@@ -406,8 +423,8 @@ def _call_tool(kis: KISConnector, name: str, args: Dict[str, Any]) -> Any:
     if name == "kis_raw_sql":
         return kis.raw_sql(a["sql"], a.get("params")).to_dict()
     if name == "kis_export":
-        return kis.export_sql(a["sql"], a.get("params"), filename=a.get("filename", ""),
-                              keyword=a.get("keyword", ""))
+        return kis.export_sql(a.get("sql", ""), a.get("params"), filename=a.get("filename", ""),
+                              keyword=a.get("keyword", ""), sheets=a.get("sheets"))
     if name == "kis_base_data":
         kind = a["kind"]
         fn = {"account": kis.get_accounts, "customer": kis.get_customers,

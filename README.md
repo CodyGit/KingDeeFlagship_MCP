@@ -18,7 +18,7 @@
 - **操作系统**：Windows（金蝶客户端仅支持 Windows）
 - **Python**：3.8+ （**必须 32 位**，因为 K3LOGIN.DLL 是 32 位 COM 组件）
 - **金蝶客户端**：KIS 旗舰版 / K3 WISE（需本机已安装）
-- **依赖**：pywin32（COM 组件调用）
+- **依赖**：pywin32（COM 组件调用）、openpyxl（导出 Excel）
 
 ## 快速开始
 
@@ -143,7 +143,7 @@ KingDeeFlagship_MCP/
 - `kis_query` - 通用业务对象查询
 - `kis_read` - 读取单条单据（含分录）
 - `kis_raw_sql` - 执行原始 SQL
-- `kis_export` - 执行只读 SQL 并把结果导出为 CSV 文件（不占用对话上下文）
+- `kis_export` - 执行只读 SQL 并把结果导出为 Excel 文件（.xlsx，可含多个工作表，不占用对话上下文）
 - `kis_base_data` - 快捷查询基础资料
 
 ### 财务会计

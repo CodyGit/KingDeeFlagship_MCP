@@ -7,7 +7,7 @@
 金蝶 KIS 旗舰版 / K3 WISE 的 MCP 服务器，由个人（Cody）开发，非金蝶官方产品。通过本机金蝶客户端的 COM 组件登录账套，让大模型以 MCP 工具只读查询账套数据。
 
 - 协议：MCP，stdio + JSON-RPC 2.0，自实现，不依赖 `mcp` 包
-- 运行环境：Windows，**32 位 Python 3.8+**，依赖只有 pywin32
+- 运行环境：Windows，**32 位 Python 3.8+**，依赖为 pywin32（COM）与 openpyxl（导出 Excel）
 - 连接方式：纯 COM。不用 pyodbc / ODBC，配置里不保存任何数据库凭证
 
 为什么必须 32 位：`K3LOGIN.DLL` 是 x86 进程内 COM 组件，只注册在 `WOW6432Node` 下，64 位进程加载会报 -2147221164（没有注册类）。

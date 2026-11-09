@@ -15,12 +15,14 @@ from .backends import create
 from .backends.base import Backend
 from .config import Config
 from .errors import BackendUnavailable, KISError, NotSupported, WriteDenied, summarize_error
-from .exporter import write_csv
+from .exporter import require_openpyxl, write_xlsx
 from .memory import (MemoryStore, TYPE_CORRECTION, TYPE_FIELD, TYPE_OUTPUT_DIR,
                      TYPE_PREFERENCE, TYPE_PROJECT, TYPE_SUBJECT)
 from .models import Filter, PageResult, Query
 from .schema import ENTITIES, MODULE_LABELS, catalog, get_entity, modules
 from .tasklog import TaskLogger
+
+MAX_EXPORT_SHEETS = 20  # 单个 Excel 最多包含的工作表数
 
 SECRET_KEYS = {
     "password", "pwd", "passwd", "client_secret", "auth_token",
@@ -216,28 +218,57 @@ class KISConnector:
             self.log_error("raw_sql_failed", e, error_summary=summarize_error(e))
             raise
 
-    # description: 执行只读 SQL 并把结果写成 CSV 到导出目录，对话中只返回路径、行数与预览
-    def export_sql(self, sql: str, params: Optional[List[Any]] = None,
-                   filename: str = "", keyword: str = "") -> Dict[str, Any]:
+    # description: 执行只读 SQL 并把结果写成 Excel 到导出目录（可含多个工作表），对话中只返回路径、行数与预览
+    def export_sql(self, sql: str = "", params: Optional[List[Any]] = None,
+                   filename: str = "", keyword: str = "",
+                   sheets: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        if sheets and sql:
+            raise KISError("sql 与 sheets 只能二选一")
+        if sheets:
+            if not isinstance(sheets, list) or len(sheets) > MAX_EXPORT_SHEETS:
+                raise KISError(f"sheets 必须是不超过 {MAX_EXPORT_SHEETS} 项的数组")
+            specs = [sp if isinstance(sp, dict) else {} for sp in sheets]
+        elif sql:
+            specs = [{"name": "数据", "sql": sql, "params": params}]
+        else:
+            raise KISError("需要提供 sql 或 sheets")
+        if not all(str(sp.get("sql") or "").strip() for sp in specs):
+            raise KISError("每个工作表都需要 sql")
         out = self.resolve_output_dir(keyword)
         if out.get("status") != "matched":
             raise KISError("尚未设置导出目录",
                            hint="先询问用户，再用 kis_output action=set 记录导出目录")
+        require_openpyxl()
         t0 = time.time()
-        r = self.raw_sql(sql, params, max_rows=int(self.config.get("max_export_rows", 50000)))
-        rows = r.rows or []
-        if not rows:
-            self.log_event("export", rows=0, cols=0, elapsed_s=round(time.time() - t0, 3))
+        limit = int(self.config.get("max_export_rows", 50000))
+        results = []
+        for i, sp in enumerate(specs, 1):
+            name = str(sp.get("name") or f"Sheet{i}")
+            try:
+                r = self.raw_sql(sp["sql"], sp.get("params"), max_rows=limit)
+            except Exception as e:  # noqa: BLE001
+                if len(specs) == 1:
+                    raise
+                raise KISError(f"工作表“{name}”查询失败：{summarize_error(e)}",
+                               hint=getattr(e, "hint", "")) from e
+            results.append((name, r.rows or [], r.warnings))
+        if not any(rows for _, rows, _ in results):
+            self.log_event("export", sheets=len(results), rows=0,
+                           elapsed_s=round(time.time() - t0, 3))
             return {"exported": False, "rows": 0, "message": "查询结果为空，未生成文件"}
-        info = write_csv(rows, out["path"], filename,
-                         default_name=time.strftime("export_%Y%m%d_%H%M%S"))
+        info = write_xlsx([(n, rows) for n, rows, _ in results], out["path"], filename,
+                          default_name=time.strftime("export_%Y%m%d_%H%M%S"))
+        for sheet, (_, _, warn) in zip(info["sheets"], results):
+            sheet["truncated"] = bool(warn)
+            if warn:
+                sheet["warnings"] = warn
         info["exported"] = True
-        info["truncated"] = bool(r.warnings)
-        if r.warnings:
-            info["warnings"] = r.warnings
-        self.log_event("export", rows=info["rows"], cols=len(info["columns"]),
-                       bytes=info["bytes"], truncated=info["truncated"],
-                       elapsed_s=round(time.time() - t0, 3), path=info["path"])
+        info["rows"] = sum(sh["rows"] for sh in info["sheets"])
+        info["truncated"] = any(sh["truncated"] for sh in info["sheets"])
+        self.log_event("export", sheets=len(info["sheets"]), rows=info["rows"],
+                       sheet_rows=[sh["rows"] for sh in info["sheets"]], bytes=info["bytes"],
+                       truncated=info["truncated"], elapsed_s=round(time.time() - t0, 3),
+                       path=info["path"])
         return info
 
     def account_sets(self) -> List[Dict[str, Any]]:
