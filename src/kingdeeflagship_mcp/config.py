@@ -109,6 +109,18 @@ def resolve_config_path(path: Optional[str] = None) -> str:
     return os.path.join(kis_home(), "config.json")
 
 
+# description: 配置文件不存在时写入默认配置，使 subjects 回填等保存逻辑有落点；写入失败则沿用内存默认值
+def _ensure_config_file(cfg_path: str) -> None:
+    if os.path.exists(cfg_path):
+        return
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(cfg_path)), exist_ok=True)
+        with open(cfg_path, "w", encoding="utf-8") as f:
+            json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
+
 def load_config(path: Optional[str] = None) -> Dict[str, Any]:
     """加载配置。优先级见 resolve_config_path。"""
     cfg_path = resolve_config_path(path)
@@ -136,6 +148,8 @@ class Config:
     @classmethod
     def load(cls, path: Optional[str] = None) -> "Config":
         p = resolve_config_path(path)
+        if path is None:
+            _ensure_config_file(p)
         return cls(load_config(p), source=p if os.path.exists(p) else "<defaults>")
 
     def get(self, path: str, default: Any = None) -> Any:
