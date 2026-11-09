@@ -1,0 +1,2 @@
+# Batch files - always CRLF
+*.bat text eol=crlf
