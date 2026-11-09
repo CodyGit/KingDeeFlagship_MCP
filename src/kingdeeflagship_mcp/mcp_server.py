@@ -15,12 +15,13 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 from .config import Config
-from .errors import KISError
+from .errors import KISError, summarize_error
 from .models import PageResult
 from .schema import MODULE_LABELS, catalog
 from .service import KISConnector
@@ -28,6 +29,8 @@ from .tasklog import TaskLogger
 
 PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_VERSIONS = {"2024-11-05", "2025-03-26", "2025-06-18"}
+SERVER_INSTRUCTIONS = "金蝶 KIS 连接器（只读模式）：所有查询操作可直接调用；多任务先 kis_subject.resolve 确定账套（歧义时向用户确认后 map 记录）；批量导出用 kis_export 直接生成 CSV 文件，不要把大量明细读进对话；更复杂的批量任务再走一次性脚本通道（每任务仅登录一次）；写 SQL 前不要猜列名，优先用 kis_raw_sql 描述里列出的已验证列，其余先查 INFORMATION_SCHEMA.COLUMNS；纠错用 kis_memory（可撤销），排错用 kis_logs。注意：此连接器仅支持读取操作，不支持任何写入或修改操作。"
+
 SERVER_INFO = {"name": "kingdeeflagship_mcp", "version": __version__}
 MAX_TEXT = 40000
 
@@ -111,10 +114,32 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "kis_raw_sql",
-        "description": "对账套库执行只读 SQL（默认仅允许 SELECT/WITH）。用于自定义报表、多表关联。",
+        "description": "对账套库执行只读 SQL（默认仅允许 SELECT/WITH）。用于自定义报表、多表关联。"
+                       "已实测可用的列（勿猜列名）：POOrder(FInterID,FBillNo,FDate,FSupplyID,FExplanation；无FMemo)；"
+                       "POOrderEntry(FInterID,FEntryID,FItemID,FQty,FPrice,FAmount)；"
+                       "ICStockBill(FInterID,FTranType,FBillNo,FDate,FSupplyID,FUse,FExplanation)；"
+                       "ICStockBillEntry(FInterID,FItemID,FQty,FPrice,FAmount)；"
+                       "t_ICItem(FItemID,FNumber,FName,FModel)；t_Supplier与t_Organization(FItemID,FName)。"
+                       "其余列先查 INFORMATION_SCHEMA.COLUMNS。需要导出大量明细时用 kis_export，不要把行数据读进对话。",
         "inputSchema": {
             "type": "object",
             "properties": {"sql": {"type": "string"}, "params": {"type": "array", "items": {}}},
+            "required": ["sql"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "kis_export",
+        "description": "执行只读 SQL 并把结果写成 CSV 文件（UTF-8 带 BOM，Excel 可直接打开）保存到导出目录；"
+                       "对话中只返回文件路径、行数、列名和前几行预览。需先用 kis_output 确认导出目录。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sql": {"type": "string"},
+                "params": {"type": "array", "items": {}},
+                "filename": {"type": "string", "description": "可选，文件名（自动补 .csv，重名会加序号）"},
+                "keyword": {"type": "string", "description": "可选：项目关键词，用于匹配专属导出目录"},
+            },
             "required": ["sql"],
             "additionalProperties": False,
         },
@@ -175,7 +200,7 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "kis_orders",
-        "description": "查询业务单据：sale_order销售订单 / purchase_order采购订单 / sale_outstock销售出库 / purchase_instock采购入库 / sale_invoice销售发票 / stock_bill全部出入库单。",
+        "description": "查询业务单据：sale_order销售订单 / purchase_order采购订单 / sale_outstock销售出库 / purchase_instock采购入库 / sale_invoice销售发票 / stock_bill全部出入库单。keyword 匹配单据编号；采购订单、采购入库、销售出库还会匹配单据备注。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -293,7 +318,8 @@ NO_DB_TOOLS = {"kis_status", "kis_connect", "kis_memory", "kis_subject",
 
 
 # ------------------------------------------------------------------ 序列化
-def _dump(obj: Any) -> str:
+# description: 序列化为紧凑 JSON（无缩进），超长则截断；同时返回截断前的字符数
+def _render(obj: Any) -> Tuple[str, int]:
     def default(o):
         if isinstance(o, PageResult):
             return o.to_dict()
@@ -303,23 +329,52 @@ def _dump(obj: Any) -> str:
             return o.isoformat(sep=" ", timespec="seconds")
         return str(o)
 
-    text = json.dumps(obj, ensure_ascii=False, indent=2, default=default)
-    if len(text) > MAX_TEXT:
-        text = text[:MAX_TEXT] + f"\n...(已截断，共 {len(text)} 字符；请缩小 limit 或指定 fields)"
-    return text
+    text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=default)
+    full = len(text)
+    if full > MAX_TEXT:
+        text = text[:MAX_TEXT] + f"\n...(已截断，共 {full} 字符；请缩小 limit 或指定 fields，大批量请改用 kis_export)"
+    return text, full
 
 
-def _ok(payload: Any) -> Dict[str, Any]:
-    return {"content": [{"type": "text", "text": _dump(payload)}], "isError": False}
+def _dump(obj: Any) -> str:
+    return _render(obj)[0]
 
 
-def _err(e: Exception) -> Dict[str, Any]:
+# description: 把序列化后的大小写入 stats，供 mcp_tool 日志统计返回给 AI 的体量
+def _fill_size(stats: Optional[Dict[str, Any]], text: str, full: int) -> None:
+    if stats is None:
+        return
+    stats["result_chars"] = len(text)
+    stats["truncated"] = full > MAX_TEXT
+    if full > MAX_TEXT:
+        stats["full_chars"] = full
+
+
+def _ok(payload: Any, stats: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    text, full = _render(payload)
+    _fill_size(stats, text, full)
+    return {"content": [{"type": "text", "text": text}], "isError": False}
+
+
+def _err(e: Exception, stats: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if isinstance(e, KISError):
         payload = e.to_dict()
     else:
         payload = {"error": e.__class__.__name__, "message": str(e),
                    "traceback": traceback.format_exc(limit=3)}
-    return {"content": [{"type": "text", "text": _dump(payload)}], "isError": True}
+    text, full = _render(payload)
+    _fill_size(stats, text, full)
+    return {"content": [{"type": "text", "text": text}], "isError": True}
+
+
+# description: 从工具结果推断行数与列数，用于日志
+def _shape(result: Any) -> Dict[str, int]:
+    rows = result.rows if isinstance(result, PageResult) else (
+        result.get("rows") if isinstance(result, dict) else None)
+    if not isinstance(rows, list):
+        return {}
+    first = rows[0] if rows else None
+    return {"rows": len(rows), "cols": len(first) if isinstance(first, dict) else 0}
 
 
 # ------------------------------------------------------------------ 调用分发
@@ -350,6 +405,9 @@ def _call_tool(kis: KISConnector, name: str, args: Dict[str, Any]) -> Any:
         return kis.read(a["entity"], a.get("key"))
     if name == "kis_raw_sql":
         return kis.raw_sql(a["sql"], a.get("params")).to_dict()
+    if name == "kis_export":
+        return kis.export_sql(a["sql"], a.get("params"), filename=a.get("filename", ""),
+                              keyword=a.get("keyword", ""))
     if name == "kis_base_data":
         kind = a["kind"]
         fn = {"account": kis.get_accounts, "customer": kis.get_customers,
@@ -444,6 +502,7 @@ class MCPServer:
         self.kis = KISConnector(config_path=config_path, task_name="mcp-server",
                                 log_kind="session")
         self.auto_connect = auto_connect
+        self.tool_stats: Dict[str, Dict[str, Any]] = {}
 
     def handle(self, req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         mid = req.get("id")
@@ -452,13 +511,18 @@ class MCPServer:
 
         if method == "initialize":
             pv = params.get("protocolVersion") or PROTOCOL_VERSION
+            client = params.get("clientInfo")
+            self.kis.log_event("mcp_initialize", instructions_chars=len(SERVER_INSTRUCTIONS),
+                               protocol=pv,
+                               client={k: str(client.get(k))[:60] for k in ("name", "version")
+                                       if isinstance(client, dict) and client.get(k)})
             return {
                 "jsonrpc": "2.0", "id": mid,
                 "result": {
                     "protocolVersion": pv if pv in SUPPORTED_VERSIONS else PROTOCOL_VERSION,
                     "capabilities": {"tools": {"listChanged": False}, "resources": {"listChanged": False}},
                     "serverInfo": SERVER_INFO,
-                    "instructions": "金蝶 KIS 连接器（只读模式）：所有查询操作可直接调用；多任务先 kis_subject.resolve 确定账套（歧义时向用户确认后 map 记录）；批量取数建议走一次性脚本通道（每任务仅登录一次）；纠错用 kis_memory（可撤销），排错用 kis_logs。注意：此连接器仅支持读取操作，不支持任何写入或修改操作。",
+                    "instructions": SERVER_INSTRUCTIONS,
                 },
             }
         if method in ("notifications/initialized", "initialized", "notifications/cancelled"):
@@ -466,6 +530,8 @@ class MCPServer:
         if method == "ping":
             return {"jsonrpc": "2.0", "id": mid, "result": {}}
         if method == "tools/list":
+            self.kis.log_event("mcp_tools_list", tools=len(TOOLS),
+                               tools_chars=len(json.dumps(TOOLS, ensure_ascii=False)))
             return {"jsonrpc": "2.0", "id": mid, "result": {"tools": TOOLS}}
         if method == "resources/list":
             return {"jsonrpc": "2.0", "id": mid, "result": {"resources": RESOURCES}}
@@ -489,19 +555,50 @@ class MCPServer:
                         "error": {"code": -32602, "message": "arguments must be object"}}
             args = args or {}
 
+            t0 = time.time()
+            stats: Dict[str, Any] = {"args_chars": len(json.dumps(args, ensure_ascii=False))}
             try:
                 if tool not in NO_DB_TOOLS and self.kis.backend is None:
                     self.kis.connect()
                 result = _call_tool(self.kis, tool, args)
-                self.kis.log_event("mcp_tool", tool=tool, ok=True)
-                return {"jsonrpc": "2.0", "id": mid, "result": _ok(result)}
+                resp = _ok(result, stats)
+                stats.update(_shape(result))
+                stats["dur_s"] = round(time.time() - t0, 3)
+                self.kis.log_event("mcp_tool", tool=tool, ok=True, **stats)
+                self._tally(tool, True, stats)
+                return {"jsonrpc": "2.0", "id": mid, "result": resp}
             except Exception as e:  # noqa: BLE001
-                self.kis.log_error("mcp_tool_failed", e, tool=tool)
-                return {"jsonrpc": "2.0", "id": mid, "result": _err(e)}
+                resp = _err(e, stats)
+                stats["dur_s"] = round(time.time() - t0, 3)
+                self.kis.log_error("mcp_tool_failed", e, tool=tool,
+                                   error_summary=summarize_error(e), **stats)
+                self._tally(tool, False, stats)
+                return {"jsonrpc": "2.0", "id": mid, "result": resp}
         return {"jsonrpc": "2.0", "id": mid,
                 "error": {"code": -32601, "message": f"Method not found: {method}"}}
 
+    # description: 累计每个工具的调用次数、失败次数、入参/返回字符数与耗时
+    def _tally(self, tool: str, ok: bool, stats: Dict[str, Any]) -> None:
+        t = self.tool_stats.setdefault(tool, {"calls": 0, "failed": 0, "args_chars": 0,
+                                              "result_chars": 0, "dur_s": 0.0})
+        t["calls"] += 1
+        t["failed"] += 0 if ok else 1
+        t["args_chars"] += stats.get("args_chars", 0)
+        t["result_chars"] += stats.get("result_chars", 0)
+        t["dur_s"] = round(t["dur_s"] + stats.get("dur_s", 0.0), 3)
+
+    # description: 会话结束时写入各工具的累计统计，便于评估一次会话的总体消耗
     def serve(self) -> None:
+        try:
+            self._serve_loop()
+        finally:
+            self.kis.log_event(
+                "session_summary", tools=self.tool_stats,
+                total_calls=sum(t["calls"] for t in self.tool_stats.values()),
+                total_failed=sum(t["failed"] for t in self.tool_stats.values()),
+                total_result_chars=sum(t["result_chars"] for t in self.tool_stats.values()))
+
+    def _serve_loop(self) -> None:
         for line in sys.stdin:
             line = line.strip()
             if not line:

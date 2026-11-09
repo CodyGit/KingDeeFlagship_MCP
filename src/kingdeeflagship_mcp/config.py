@@ -18,6 +18,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "allow_sql_prefixes": ["select", "with"],
     # 单页返回上限
     "max_page_size": 2000,
+    # kis_export 单次导出行数上限（写文件，不进对话上下文）
+    "max_export_rows": 50000,
 
     # 任务日志：每任务/每会话一个文件，log_retention_days>0 时自动清理过期日志
     "logs_dir": "logs",

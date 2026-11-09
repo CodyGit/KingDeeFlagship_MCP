@@ -14,7 +14,8 @@ from . import __version__
 from .backends import create
 from .backends.base import Backend
 from .config import Config
-from .errors import BackendUnavailable, KISError, NotSupported, WriteDenied
+from .errors import BackendUnavailable, KISError, NotSupported, WriteDenied, summarize_error
+from .exporter import write_csv
 from .memory import (MemoryStore, TYPE_CORRECTION, TYPE_FIELD, TYPE_OUTPUT_DIR,
                      TYPE_PREFERENCE, TYPE_PROJECT, TYPE_SUBJECT)
 from .models import Filter, PageResult, Query
@@ -186,6 +187,7 @@ class KISConnector:
         try:
             r = self._run("query_entity", entity, q)
             self.log_event("query", entity=entity, rows=len(r.rows or []),
+                           cols=len(r.rows[0]) if r.rows else 0,
                            total=r.total, elapsed_s=round(time.time() - t0, 3),
                            limit=limit, keyword=keyword)
             return r
@@ -199,17 +201,44 @@ class KISConnector:
         return self._run("read_entity", entity, key)
 
 
-    def raw_sql(self, sql: str, params: Optional[List[Any]] = None) -> PageResult:
+    def raw_sql(self, sql: str, params: Optional[List[Any]] = None,
+                max_rows: Optional[int] = None) -> PageResult:
         t0 = time.time()
         try:
-            r = self._run("raw_sql", sql, params)
+            kw = {"max_rows": max_rows} if max_rows else {}
+            r = self._run("raw_sql", sql, params, **kw)
             self.log_sql("raw_sql", sql, rows=len(r.rows or []),
+                         cols=len(r.rows[0]) if r.rows else 0,
                          elapsed_s=round(time.time() - t0, 3))
             return r
         except Exception as e:  # noqa: BLE001
             self.log_sql("raw_sql_failed", sql)
-            self.log_error("raw_sql_failed", e)
+            self.log_error("raw_sql_failed", e, error_summary=summarize_error(e))
             raise
+
+    # description: 执行只读 SQL 并把结果写成 CSV 到导出目录，对话中只返回路径、行数与预览
+    def export_sql(self, sql: str, params: Optional[List[Any]] = None,
+                   filename: str = "", keyword: str = "") -> Dict[str, Any]:
+        out = self.resolve_output_dir(keyword)
+        if out.get("status") != "matched":
+            raise KISError("尚未设置导出目录",
+                           hint="先询问用户，再用 kis_output action=set 记录导出目录")
+        t0 = time.time()
+        r = self.raw_sql(sql, params, max_rows=int(self.config.get("max_export_rows", 50000)))
+        rows = r.rows or []
+        if not rows:
+            self.log_event("export", rows=0, cols=0, elapsed_s=round(time.time() - t0, 3))
+            return {"exported": False, "rows": 0, "message": "查询结果为空，未生成文件"}
+        info = write_csv(rows, out["path"], filename,
+                         default_name=time.strftime("export_%Y%m%d_%H%M%S"))
+        info["exported"] = True
+        info["truncated"] = bool(r.warnings)
+        if r.warnings:
+            info["warnings"] = r.warnings
+        self.log_event("export", rows=info["rows"], cols=len(info["columns"]),
+                       bytes=info["bytes"], truncated=info["truncated"],
+                       elapsed_s=round(time.time() - t0, 3), path=info["path"])
+        return info
 
     def account_sets(self) -> List[Dict[str, Any]]:
         return self._run("list_account_sets")

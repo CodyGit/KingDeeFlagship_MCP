@@ -337,7 +337,8 @@ class COMBackend(Backend):
 
 
     # ------------------------------------------------------------ SQL
-    def raw_sql(self, sql: str, params: Optional[List[Any]] = None) -> PageResult:
+    def raw_sql(self, sql: str, params: Optional[List[Any]] = None,
+                max_rows: Optional[int] = None) -> PageResult:
         s = sql.strip()
         prefix = re.sub(r"^[\s(]+", "", s.split()[0]).lower() if s.split() else ""
         allowed = [str(p).lower() for p in self.config.get("allow_sql_prefixes", ["select", "with"])]
@@ -355,9 +356,9 @@ class COMBackend(Backend):
                 hint="去掉语句中间的分号，一次只提交一条 SELECT/WITH 语句",
             )
         self._log("sql_execute", op="raw_sql", sql_prefix=prefix)
-        max_rows = int(self.config.get("max_page_size", 2000))
+        max_rows = int(max_rows or self.config.get("max_page_size", 2000))
         rows, truncated = ado.fetch(self._db(), s, params, max_rows=max_rows)
-        warn = ["结果超过 max_page_size 已截断"] if truncated else []
+        warn = [f"结果超过 {max_rows} 行已截断"] if truncated else []
         return PageResult(entity="raw_sql", rows=rows, total=len(rows),
                           backend=self.name, sql=sql, warnings=warn)
 

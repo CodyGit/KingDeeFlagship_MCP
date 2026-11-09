@@ -143,6 +143,7 @@ KingDeeFlagship_MCP/
 - `kis_query` - 通用业务对象查询
 - `kis_read` - 读取单条单据（含分录）
 - `kis_raw_sql` - 执行原始 SQL
+- `kis_export` - 执行只读 SQL 并把结果导出为 CSV 文件（不占用对话上下文）
 - `kis_base_data` - 快捷查询基础资料
 
 ### 财务会计

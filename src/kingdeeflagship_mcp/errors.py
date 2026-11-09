@@ -38,3 +38,13 @@ class WriteDenied(KISError):
 
 class QueryError(KISError):
     """查询构造或执行失败。"""
+
+
+# description: 提取异常的一行摘要；COM/OLE DB 错误优先取其中的描述文本
+def summarize_error(e: BaseException, limit: int = 200) -> str:
+    args = getattr(e, "args", ())
+    if len(args) >= 3 and isinstance(args[2], (tuple, list)) and len(args[2]) >= 3 and args[2][2]:
+        text = str(args[2][2])
+    else:
+        text = getattr(e, "message", None) or str(e)
+    return " ".join(text.split())[:limit]

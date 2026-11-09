@@ -55,7 +55,8 @@ class Backend(ABC):
         raise NotSupported(f"{self.label} 不支持明细读取")
 
     # -------------------------------------------------------- 其它
-    def raw_sql(self, sql: str, params: Optional[List[Any]] = None) -> PageResult:
+    def raw_sql(self, sql: str, params: Optional[List[Any]] = None,
+                max_rows: Optional[int] = None) -> PageResult:
         raise NotSupported(f"{self.label} 不支持原始 SQL")
 
     def list_account_sets(self) -> List[Dict[str, Any]]:
