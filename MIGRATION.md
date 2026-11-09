@@ -1,7 +1,3 @@
-# date: 2026-11-06 14:30
-# author: cody
-# description: 项目重构说明
-
 # 金蝶 KIS 旗舰版 MCP 服务器 - 重构说明
 
 ## 概述

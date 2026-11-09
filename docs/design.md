@@ -213,12 +213,24 @@ main 分支只读由三层保证：没有写入工具；`raw_sql` 前缀白名�
 
 ## 10. 开发与验证
 
+### 10.1 环境初始化（setup.bat）
+
 ```bash
-# 32 位 Python 虚拟环境
-C:\Python311-32\python.exe -m venv .venv32
-.venv32\Scripts\activate
-pip install -e .
+setup.bat                 # 等价于 powershell -File scripts\setup.ps1
+setup.bat -Recreate       # 重建 .venv32
+setup.bat -PythonExe C:\path\python.exe
 ```
+
+维护 `scripts/setup.ps1` 时注意：
+
+- 32 位 Python 的查找顺序：`-PythonExe` → `build\py32` → `py -0p` 登记的版本 → `LOCALAPPDATA\Programs\Python\Python3*-32` 与 `C:\Python3*-32` → 下载 NuGet `pythonx86` 便携版。每个候选都实际运行并检查位数，不凭路径名判断
+- 便携版的版本和 SHA512 写死在脚本里，下载后必须校验，不符就删除并停止。升级版本时两者一起改
+- 幂等：`.venv32` 存在且位数正确就复用，第 3 步 `pip install -e` 每次都会执行，可编辑安装因此总会指向当前目录。基础解释器丢失导致 venv 不可用时自动重建
+- 原生命令统一经 `Invoke-Native` 调用：Windows PowerShell 5.1 在 `Stop` 模式下会把 stderr 输出当成异常，pip 和 Node 都会写 stderr
+- 文件必须是 UTF-8 BOM + CRLF，否则 PowerShell 5.1 会把中文读乱
+- 生成的 MCP 配置只打印和保存到 `build\mcp-config.json`，**不自动改写用户的 Agent 配置文件**，避免覆盖其中已有的 MCP
+
+### 10.2 手工验证
 
 没有金蝶客户端的机器上，用任意 Python 3.8+ 也能验证非 COM 部分：
 

@@ -1,72 +1,39 @@
-# date: 2026-11-06 14:30
-# author: cody
-# description: 使用说明 - 如何配置和运行 MCP 服务器
-
 # 金蝶 KIS 旗舰版 MCP 服务器使用指南
 
 ## 一、环境准备
 
-### 1.1 安装 32 位 Python
-
-**重要：必须使用 32 位 Python**，因为金蝶的 K3LOGIN.DLL 是 32 位 COM 组件。
-
-下载地址：https://www.python.org/downloads/
-
-- 选择 Windows installer (32-bit)
-- 建议安装到：`C:\Python311-32\`
-- 勾选 "Add Python to PATH"（可选）
-
-验证安装：
-
-```bash
-C:\Python311-32\python.exe --version
-# 应显示：Python 3.11.x (32-bit)
-```
-
-### 1.2 确认金蝶客户端已安装
-
-本机需要已安装金蝶 KIS 旗舰版客户端，并确保能正常登录。
-
-关键组件：`K3LOGIN.DLL` 必须已注册（安装金蝶时自动注册）
+- Windows 系统
+- 本机已安装金蝶 KIS 旗舰版客户端并能正常登录（`K3LOGIN.DLL` 随客户端注册）
+- 不需要自己装 Python：金蝶的登录组件是 32 位 COM，`setup.bat` 会自动找到或下载 32 位 Python
 
 ## 二、安装配置
 
-### 2.1 克隆仓库
+### 2.1 获取代码并初始化
 
 ```bash
 git clone <仓库地址>
 cd KingDeeFlagship_MCP
+setup.bat
 ```
 
-### 2.2 创建虚拟环境
+脚本依次完成：
 
-```bash
-# 使用 32 位 Python 创建虚拟环境
-C:\Python311-32\python.exe -m venv .venv32
+1. 找 32 位 Python 3.8+（先找 `build\py32`，再找 `py` 启动器登记的版本和常见安装目录）；都没有就从 NuGet 下载 Python 软件基金会发布的 32 位便携版 3.11.9（约 16MB），校验写死的 SHA512 后解压到 `build\py32`
+2. 创建 `.venv32` 虚拟环境
+3. `pip install -e .` 安装依赖（可编辑安装，改源码立即生效）
+4. 自检：确认 32 位、pywin32 可用、MCP 服务能启动、本机是否有金蝶登录组件
+5. 打印桌面 Agent 要用的 MCP 配置，并保存到 `build\mcp-config.json`
 
-# 激活虚拟环境
-.venv32\Scripts\activate
+可以重复运行。常用参数：`setup.bat -Recreate` 删除并重建虚拟环境，`setup.bat -PythonExe C:\path\python.exe` 指定自己的 32 位 Python。
+`build\py32` 是虚拟环境的基础解释器，不要删除；误删后重新运行 `setup.bat` 即可修复。
 
-# 验证是否为 32 位
-python -c "import struct; print(struct.calcsize('P') * 8, 'bit')"
-# 应显示：32 bit
-```
+结束时若提示「未检测到金蝶登录组件 K3Login」，说明本机没装金蝶客户端，装好后才能连接账套，其余功能不受影响。
 
-### 2.3 安装依赖
-
-```bash
-# 安装包（开发模式）
-pip install -e .
-
-# 验证安装
-kingdeeflagship-mcp --help
-```
-
-### 2.4 创建配置文件
+### 2.2 创建配置文件（可选）
 
 ```bash
 # 在用户数据目录生成配置模板（%LOCALAPPDATA%\kingdeeflagship_mcp\config.json）
-kingdeeflagship-mcp init-config
+.venv32\Scripts\python.exe -m kingdeeflagship_mcp init-config
 ```
 
 配置文件与 memory.json、cred.bin、logs 同在该目录，可用环境变量 `KIS_HOME` 改位置，`KIS_CONFIG` 指定其它配置文件。编辑 `config.json`：
@@ -93,20 +60,19 @@ kingdeeflagship-mcp init-config
 
 ## 三、基础测试
 
+下面的命令都在项目目录下执行。可以先 `.venv32\Scripts\activate` 激活虚拟环境，之后直接用 `kingdeeflagship-mcp <子命令>`；不激活则写成 `.venv32\Scripts\python.exe -m kingdeeflagship_mcp <子命令>`。
+
 ### 3.1 测试连接
 
 ```bash
-# 查看状态
+# 查看状态，会弹出金蝶登录窗并连接账套
 kingdeeflagship-mcp status
-
-# 测试登录（会弹出金蝶登录窗口）
-kingdeeflagship-mcp connect
 
 # 查询客户列表
 kingdeeflagship-mcp query customer --keyword 科技 --limit 10
 
 # 查询凭证
-kingdeeflagship-mcp vouchers --start-date 2024-01-01 --end-date 2024-01-31 --limit 20
+kingdeeflagship-mcp query voucher --start 2024-01-01 --end 2024-01-31 --limit 20
 ```
 
 ### 3.2 环境探测
@@ -119,59 +85,38 @@ kingdeeflagship-mcp discover
 kingdeeflagship-mcp discover --check-tables
 ```
 
-## 四、配置 MCP 服务器
+## 四、关联桌面 Agent
 
-### 4.1 在 Claude Desktop 中配置
+### 4.1 合并配置
 
-编辑配置文件：
-
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-添加以下内容：
+`setup.bat` 结束时会打印配置，同样内容保存在 `build\mcp-config.json`。把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`，不要整个文件覆盖：
 
 ```json
 {
   "mcpServers": {
     "kingdee-kis": {
-      "command": "E:\\path\\to\\KingDeeFlagship_MCP\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
-      "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
-      "env": {
-        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"
-      }
+      "command": "<项目目录>\\.venv32\\Scripts\\python.exe",
+      "args": ["-m", "kingdeeflagship_mcp", "mcp"]
     }
   }
 }
 ```
 
-**注意**：
-- 路径中的反斜杠 `\` 需要转义为 `\\`
-- 将 `E:\\path\\to\\KingDeeFlagship_MCP` 替换为实际路径
+`<项目目录>` 换成你克隆的位置。不需要 `cwd`、`PYTHONPATH` 和 `PYTHONIOENCODING`。
 
-### 4.2 在 WorkBuddy 中配置
+| Agent | 配置文件 |
+|---|---|
+| Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
+| WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
+| Kimi 桌面版 | 通过插件清单接入，见仓库 `kimi` 分支 |
 
-编辑配置文件：
+### 4.2 重启 Agent
 
-**Windows**: `%USERPROFILE%\.workbuddy\mcp.json`
+保存配置后重启 Agent。第一次查询账套时会弹出金蝶登录窗口，在窗口里选择账套并登录。
 
-```json
-{
-  "mcpServers": {
-    "kingdee-kis": {
-      "command": "E:\\path\\to\\KingDeeFlagship_MCP\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
-      "cwd": "E:\\path\\to\\KingDeeFlagship_MCP",
-      "env": {
-        "PYTHONPATH": "E:\\path\\to\\KingDeeFlagship_MCP\\src"
-      }
-    }
-  }
-}
-```
+### 4.3 项目目录被移动或改名
 
-### 4.3 重启客户端
-
-配置完成后，重启 Claude Desktop 或 WorkBuddy 即可使用。
+在新位置运行 `setup.bat -Recreate` 重建虚拟环境，再更新 Agent 配置里的路径。
 
 ## 五、高级配置
 
@@ -229,12 +174,12 @@ kingdeeflagship-mcp store-cred --key default --user 用户名 --acct-id AIS20230
 
 ### 6.1 报错 `-2147221164` (类未注册)
 
-**原因**：使用了 64 位 Python
+**原因**：本机没有安装金蝶客户端（`K3LOGIN.DLL` 未注册），或 Agent 配置里的 `command` 指向了 64 位 Python。
 
-**解决**：确保使用 32 位 Python：
+**解决**：先确认金蝶客户端已安装并能正常登录；再确认 `command` 是项目的 `.venv32\Scripts\python.exe`，并验证位数：
 
 ```bash
-python -c "import struct; print(struct.calcsize('P') * 8)"
+.venv32\Scripts\python.exe -c "import struct; print(struct.calcsize('P') * 8)"
 # 必须输出：32
 ```
 
@@ -269,15 +214,7 @@ kingdeeflagship-mcp account-sets
 
 ### 6.5 中文乱码
 
-**解决**：确保环境变量设置正确
-
-```json
-{
-  "env": {
-    "PYTHONIOENCODING": "utf-8"
-  }
-}
-```
+程序已强制 stdio 使用 UTF-8，正常不需要额外设置。若仍出现乱码，确认 Agent 配置里的 `command` 指向的是项目的 `.venv32\Scripts\python.exe`，而不是其它 Python；再用 `kis_logs` 查看最新日志定位。
 
 ## 七、日志和调试
 
