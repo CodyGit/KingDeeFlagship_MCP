@@ -7,7 +7,7 @@
 ## 特性
 
 - **纯 COM 连接**：K3Login 登录 → 获取账套连接串 → ADODB 只读查询
-- **MCP 标准协议**：stdio / JSON-RPC 2.0，可接入 WorkBuddy、Claude Desktop 等智能体
+- **MCP 标准协议**：stdio / JSON-RPC 2.0，可接入 WorkBuddy、Kimi 等智能体
 - **零配置凭据**：支持 DPAPI 加密存储，静默登录不弹窗
 - **多账套管理**：智能主体识别，自动映射任务关键词到目标账套
 - **纠错记忆**：可撤销的记忆系统，记录纠错、偏好、主体映射
@@ -43,61 +43,24 @@ scripts\setup.bat
 
 ### 2. 关联桌面 Agent
 
-`scripts\setup.bat` 结束时会打印配置，把其中的 `kingdee-kis` 这一项**合并**进 Agent 配置的 `mcpServers`（不要整个文件覆盖，以免丢掉已有的其它 MCP），然后重启 Agent：
+根据你使用的桌面 Agent 执行对应脚本即可，均可重复运行：
 
-```json
-{
-  "mcpServers": {
-    "kingdee-kis": {
-      "command": "<项目目录>\\.venv32\\Scripts\\python.exe",
-      "args": ["-m", "kingdeeflagship_mcp", "mcp"]
-    }
-  }
-}
-```
+- **WorkBuddy**：运行 `scripts\workbuddy_setup.bat`。脚本会自动把 `kingdee-kis` 连接器合并进 `%USERPROFILE%\.workbuddy\mcp.json`（已包含则跳过，修改前自动备份），并把使用指南安装为 WorkBuddy 技能（`~\.workbuddy\skills\kingdee-kis\`）。完成后重启 WorkBuddy。
+- **Kimi 桌面版**：运行 `scripts\kimi_setup.bat`，一键安装为插件，之后在 Kimi 插件页「个人」里点「＋」安装。升级、`--offline` / `--dry-run` 参数、自定义数据目录等详细说明见 `docs/USAGE.md`「4.4 安装到 Kimi 桌面版」。
 
-`<项目目录>` 是你克隆的位置，使用 `scripts\setup.bat` 打印的真实路径即可，不需要 `cwd` 和 `PYTHONPATH`。
+项目目录被移动或改名后，在新位置运行 `scripts\setup.bat -Recreate`，并重新执行上面对应的接入脚本。
 
-WorkBuddy 用户可以直接一键接入：运行 `scripts\workbuddy_setup.bat`，脚本会自动把 `kingdee-kis` 连接器**合并**进 `%USERPROFILE%\.workbuddy\mcp.json`（已包含则跳过，修改前自动备份），并把使用指南安装为 WorkBuddy 技能（`~\.workbuddy\skills\kingdee-kis\`），可重复运行。
+> 想接入其它桌面 Agent？欢迎提交 Issue；或者直接让你的 AI 阅读本项目代码后自行完成接入（MCP 标准协议，核心是把 `build\mcp-config.json` 里的 `kingdee-kis` 合并进 Agent 配置的 `mcpServers`）。
 
-| Agent | 配置文件 |
-|---|---|
-| Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
-| WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
-| Kimi 桌面版 | 一键安装为插件：`scripts\kimi_setup.bat` |
+### 3. 配置（可选）
 
-项目目录被移动或改名后，在新位置运行 `scripts\setup.bat -Recreate`，并更新 Agent 配置里的路径。
-
-### 3. 安装到 Kimi 桌面版（可选）
-
-前置：已运行 `scripts\setup.bat`（生成 `.venv32`），本机装有 Kimi 桌面版和 Node.js。
-
-```bash
-scripts\kimi_setup.bat
-```
-
-脚本会自动完成：从华为云镜像下载嵌入式 32 位 Python 3.11.9 → 连同依赖和源码组装成插件包 `dist\kimi\kingdee-kis`（约 26 MB）→ 自检运行时和 MCP 握手 → 注册到 Kimi 个人插件市场。之后在 Kimi 插件页「个人」里点「＋」安装。
-
-- 工具名以 `mcp__plugin-kingdee-kis_kis__` 开头，如 `mcp__plugin-kingdee-kis_kis__kis_describe_entity`
-- **自定义过 Kimi 数据目录（daimon-share）也能用**：脚本按「`KIMI_SHARE_DIR` 环境变量 → Kimi 日志里的 `stateRoot` → 默认路径」自动探测真实目录，也可用 `--kimi-share` 显式指定；脚本开头会打印探测结果和来源
-- **升级**（`git pull` 之后）：还是同一条 `scripts\kimi_setup.bat`，脚本会识别出插件已安装并算出更大的版本号，跑完到 Kimi 插件页点「更新」
-  - 版本号由脚本比较「源码 `__version__` / 已装清单 / 市场登记」后决定（作者没改 `__version__` 时自动补 patch 位），否则 Kimi 不显示「更新」
-  - 点更新前**不要先进金蝶对话**：插件的 MCP 进程会占用插件目录，导致更新报 `EBUSY`
-  - 更新失败就先完全退出 Kimi，再跑 `scripts\kimi_setup.bat --offline` 直接替换插件目录（不用再点更新）
-  - `scripts\kimi_setup.bat --dry-run` 只打印版本计划，不动文件
-- 插件状态、凭据、日志都在 `%LOCALAPPDATA%\kingdeeflagship_mcp\`，升级不会丢
-- 想免登录弹窗：双击插件目录里的 `setup.cmd` 录入一次凭据（DPAPI 加密）
-
-### 4. 配置（可选）
-
-配置文件与记忆、凭据、日志放在同一个用户数据目录，默认 `%LOCALAPPDATA%\kingdeeflagship_mcp\`（可用环境变量 `KIS_HOME` 改位置）。
-生成配置模板，或复制仓库里的 `config/config.example.json` 过去：
+配置文件与记忆、凭据、日志放在同一个用户数据目录，默认 `%LOCALAPPDATA%\kingdeeflagship_mcp\`（可用环境变量 `KIS_HOME` 改位置）。程序启动时如果发现配置文件不存在，会自动生成默认配置，所以通常不需要手动创建；想重新生成一份默认模板（**会覆盖现有配置**）时才需要执行：
 
 ```bash
 .venv32\Scripts\python.exe -m kingdeeflagship_mcp init-config
 ```
 
-编辑 `%LOCALAPPDATA%\kingdeeflagship_mcp\config.json`：
+多账套映射等自定义配置直接编辑 `%LOCALAPPDATA%\kingdeeflagship_mcp\config.json`：
 
 ```json
 {
@@ -116,7 +79,7 @@ scripts\kimi_setup.bat
 }
 ```
 
-### 5. 测试连接
+### 4. 测试连接
 
 ```bash
 # 查看状态，会弹出金蝶登录窗并连接账套

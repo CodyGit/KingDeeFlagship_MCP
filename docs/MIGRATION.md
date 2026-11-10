@@ -1,5 +1,7 @@
 # 金蝶 KIS 旗舰版 MCP 服务器 - 重构说明
 
+> **说明**：本文是 2026-11-06 重构完成时的历史记录，其中「安装和使用」「配置 MCP 客户端」等章节反映的是当时的做法。当前的安装、接入 WorkBuddy / Kimi 的方式请以 `README.md` 和 `docs/USAGE.md` 为准（现在运行 `scripts\setup.bat` 即可完成初始化，无需手动创建虚拟环境）。
+
 ## 概述
 
 本项目将原先的 `kingdee-kis-connector` 代码重构为标准的 MCP (Model Context Protocol) 工程结构。

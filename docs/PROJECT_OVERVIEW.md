@@ -34,11 +34,16 @@ KingDeeFlagship_MCP/
 ├── config/
 │   └── config.example.json # 配置示例
 ├── scripts/
-│   └── export_task.py      # 批量导出模板
+│   ├── setup.bat            # 初始化入口（32 位 Python、.venv32、依赖、自检）
+│   ├── kimi_setup.bat       # Kimi 插件安装
+│   ├── workbuddy_setup.bat  # WorkBuddy 一键接入
+│   └── export_task.py       # 批量导出模板
 ├── docs/
-│   ├── USAGE.md            # 使用指南
-│   ├── MIGRATION.md        # 迁移说明
-│   └── SUMMARY.md          # 重构总结
+│   ├── USAGE.md             # 使用指南
+│   ├── design.md            # 设计文档
+│   ├── kimi-plugin-design.md # Kimi 插件设计
+│   ├── MIGRATION.md         # 迁移说明
+│   └── SUMMARY.md           # 重构总结
 ├── pyproject.toml          # 项目配置
 ├── README.md               # 项目说明
 └── LICENSE                 # MIT许可证
@@ -87,14 +92,8 @@ KingDeeFlagship_MCP/
 ### 安装
 
 ```bash
-# 1. 创建32位虚拟环境
-C:\Python311-32\python.exe -m venv .venv32
-
-# 2. 激活环境
-.venv32\Scripts\activate
-
-# 3. 安装
-pip install -e .
+# 一键初始化：自动准备 32 位 Python、创建 .venv32、安装依赖并自检
+scripts\setup.bat
 ```
 
 ### 测试
@@ -110,29 +109,17 @@ kingdeeflagship-mcp connect
 kingdeeflagship-mcp query customer --limit 5
 ```
 
-### 配置 MCP 客户端
+### 关联桌面 Agent
 
-在 Claude Desktop 配置文件中添加：
-
-```json
-{
-  "mcpServers": {
-    "kingdee-kis": {
-      "command": "路径\.venv32\Scripts\python.exe",
-      "args": ["-m", "kingdeeflagship_mcp", "mcp"],
-      "cwd": "项目路径",
-      "env": {
-        "PYTHONPATH": "项目路径\src"
-      }
-    }
-  }
-}
-```
+- **WorkBuddy**：运行 `scripts\workbuddy_setup.bat`（自动合并 mcp.json 并安装技能）
+- **Kimi 桌面版**：运行 `scripts\kimi_setup.bat`（一键安装为插件）
 
 ## 📚 文档
 
 - **README.md** - 项目介绍和快速开始
 - **docs/USAGE.md** - 详细使用指南（10章节）
+- **docs/design.md** - 项目设计文档
+- **docs/kimi-plugin-design.md** - Kimi 插件设计
 - **docs/MIGRATION.md** - 从旧项目迁移说明
 - **docs/SUMMARY.md** - 重构完成总结
 

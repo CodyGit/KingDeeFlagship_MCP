@@ -33,6 +33,8 @@ scripts\setup.bat
 
 ### 2.2 创建配置文件（可选）
 
+配置文件不存在时，程序首次运行会自动在用户数据目录生成默认配置，通常无需手动创建。想提前生成或重置为默认模板（**会覆盖已有配置**）时执行：
+
 ```bash
 # 在用户数据目录生成配置模板（%LOCALAPPDATA%\kingdeeflagship_mcp\config.json）
 .venv32\Scripts\python.exe -m kingdeeflagship_mcp init-config
@@ -108,9 +110,9 @@ kingdeeflagship-mcp discover --check-tables
 
 | Agent | 配置文件 |
 |---|---|
-| Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
-| WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
+| WorkBuddy | 一键接入：`scripts\workbuddy_setup.bat`（自动合并进 `%USERPROFILE%\.workbuddy\mcp.json`） |
 | Kimi 桌面版 | 一键安装为插件：`scripts\kimi_setup.bat`，见「4.4 安装到 Kimi 桌面版」 |
+| 其它 MCP 桌面 Agent（如 Claude Desktop） | 手动合并，配置文件见各 Agent 文档 |
 
 ### 4.2 重启 Agent
 
