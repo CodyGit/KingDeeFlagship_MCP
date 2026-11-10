@@ -6,7 +6,9 @@ param(
     # 指定一个 32 位 python.exe（Python 3.8+）；不指定则自动查找，找不到就下载官方便携版
     [string]$PythonExe = '',
     # 删除并重建 .venv32
-    [switch]$Recreate
+    [switch]$Recreate,
+    # 真的实例化一次 K3Login 组件（会弹出金蝶登录窗或组件自身的错误框，默认不做）
+    [switch]$ProbeCom
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,6 +21,7 @@ $VenvPy = Join-Path $Venv 'Scripts\python.exe'
 $Py32   = Join-Path $Root 'build\py32'
 $Cache  = Join-Path $Root 'build\cache'
 $MinMinor = 8
+$ComProgId = 'K3Login.ClsLogin'   # 金蝶 KIS 登录组件
 
 # 官方 32 位便携 Python：Python 软件基金会发布在 NuGet 的 pythonx86。版本与哈希写死，下载后必须校验
 $PortableVersion = '3.11.9'
@@ -38,6 +41,34 @@ function Invoke-Native([string]$Exe, [string[]]$ArgList) {
     } finally {
         $ErrorActionPreference = $old
     }
+}
+
+# 查 ProgID -> CLSID -> InprocServer32 拿 DLL 路径。只读注册表，不创建 COM 对象：
+# K3Login 是 VB6 组件，在非金蝶环境的进程里实例化时它内部可能抛「运行时错误 91」并弹出
+# 阻塞式消息框（标题 k3Login），脚本会一直卡住等人点确定。
+function Get-ComDll([string]$ProgId) {
+    $progKeys = @(
+        "Registry::HKEY_CLASSES_ROOT\$ProgId",
+        "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Classes\$ProgId",
+        "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Classes\$ProgId",
+        "Registry::HKEY_CURRENT_USER\Software\Classes\$ProgId"
+    )
+    foreach ($p in $progKeys) {
+        if (-not (Test-Path -LiteralPath "$p\CLSID")) { continue }
+        $clsid = (Get-ItemProperty -LiteralPath "$p\CLSID" -Name '(default)' -ErrorAction SilentlyContinue).'(default)'
+        if (-not $clsid) { continue }
+        foreach ($c in @(
+            "Registry::HKEY_CLASSES_ROOT\CLSID\$clsid\InprocServer32",
+            "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Classes\CLSID\$clsid\InprocServer32",
+            "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Classes\CLSID\$clsid\InprocServer32",
+            "Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\$clsid\InprocServer32")) {
+            if (Test-Path -LiteralPath $c) {
+                $dll = (Get-ItemProperty -LiteralPath $c -Name '(default)' -ErrorAction SilentlyContinue).'(default)'
+                if ($dll) { return $dll }
+            }
+        }
+    }
+    return $null
 }
 
 # 返回 @{Bits; Major; Minor}；不可执行或不是 Python 时返回 $null
@@ -161,9 +192,25 @@ finally {
 if ($r.Code -ne 0) { $r.Out | Out-Host; Fail 'MCP 服务自检失败' }
 Write-Host '    MCP 服务自检通过'
 
-$r = Invoke-Native $VenvPy @('-c', "import win32com.client as w;w.Dispatch('K3Login.ClsLogin')")
-if ($r.Code -eq 0) { Write-Host '    检测到金蝶登录组件 K3Login' }
-else { Write-Host '    [提示] 本机未检测到金蝶登录组件 K3Login，连接账套前需要先安装金蝶 KIS 客户端' -ForegroundColor Yellow }
+# 只看注册表，不实例化：K3Login 组件在 setup 进程里 Dispatch 时，可能内部抛「运行时错误 91」
+# 并弹出阻塞式消息框（标题 k3Login），脚本会卡死到有人点确定为止。要实例化请显式加 -ProbeCom。
+Step '检查金蝶登录组件'
+$comDll = Get-ComDll $ComProgId
+if ($comDll -and (Test-Path -LiteralPath $comDll)) {
+    Write-Host "    检测到金蝶登录组件：$comDll"
+} elseif ($comDll) {
+    Write-Host "    [提示] 注册表里登记了 $ComProgId，但 DLL 已不存在：$comDll" -ForegroundColor Yellow
+    Write-Host '            请重装金蝶 KIS 旗舰版客户端，或重新注册 K3LOGIN.DLL' -ForegroundColor Yellow
+} else {
+    Write-Host "    [提示] 未检测到金蝶登录组件 $ComProgId，连接账套前需要先安装金蝶 KIS 客户端" -ForegroundColor Yellow
+}
+
+if ($ProbeCom) {
+    Step '实例化登录组件（可能出现金蝶登录窗或组件错误框，需要手动点掉）'
+    $r = Invoke-Native $VenvPy @('-c', "import pythoncom,win32com.client as w;pythoncom.CoInitialize();w.Dispatch('$ComProgId');print('ok')")
+    if ($r.Code -eq 0) { Write-Host '    实例化成功' }
+    else { Write-Host '    [提示] 实例化失败：组件初始化异常（环境已装好，连账套时再排查）' -ForegroundColor Yellow }
+}
 
 # ---------------------------------------------------------------- 5. 配置片段
 # Windows PowerShell 5.1 的 ConvertTo-Json 固定 4 空格缩进且冒号后有多余空格，无法调整，所以这里手工拼 2 空格缩进的 JSON
