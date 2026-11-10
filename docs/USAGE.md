@@ -130,6 +130,8 @@ scripts\kimi_setup.bat
 
 脚本自动完成：下载嵌入式 32 位 Python 3.11.9 → 组装插件包 `dist\kimi\kingdee-kis` → 自检运行时与 MCP 握手 → 注册到 Kimi 个人插件市场。之后在 Kimi 插件页「个人」里点「＋」安装，工具名以 `mcp__plugin-kingdee-kis_kis__` 开头。
 
+Kimi 的数据目录（daimon-share）被自定义过也能直接用：脚本按「`KIMI_SHARE_DIR` 环境变量 → Kimi 日志里的 `stateRoot` → 默认路径」自动探测，探测结果和来源会打印出来；也可以用 `--kimi-share <目录>` 显式指定。登记失败时错误信息会带上实际使用的目录，便于核对。
+
 升级（`git pull` 之后）就是同一条命令，脚本会识别出「已安装」并按升级处理：
 
 ```bash

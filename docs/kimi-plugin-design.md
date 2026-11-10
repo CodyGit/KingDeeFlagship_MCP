@@ -131,6 +131,8 @@ scripts\kimi_setup.bat --dry-run
 1. `register-personal dist\kimi\kingdee-kis --market personal` —— 只登记，不安装；之后在「插件 → 个人」点 ＋，由 daemon 自己装并热加载
 2. **不调用 `kimi-plugin install`**：命令行直装会把来源记成「本地路径」，既挡住市场登记（"已通过其他来源安装"），也让后续「更新」撞上目录占用
 
+**daimon-share 目录的解析**（用户自定义数据目录时必须做对，否则登记落到错误位置，表现为 Kimi 里看不到插件）：Kimi 主进程的解析顺序是 `KIMI_SHARE_DIR` 环境变量 > 内置默认，并把该变量传给 daemon。脚本按「`--kimi-share` 参数 > `KIMI_SHARE_DIR` > Kimi 主进程日志里的 `stateRoot=<share>\daimon\agents\main`（向上三级还原）> 默认 `%APPDATA%\kimi-desktop\daimon-share`」取第一个真实存在的目录，并在开头打印来源；状态探测、登记、`--offline` 替换全部用同一份解析结果。登记失败时错误信息会带上实际使用的 share 目录。
+
 **版本号为什么是算出来的**：Kimi 只在「市场登记版本 > 已装版本」时显示「更新」。作者改代码时不一定 bump `__version__`，所以 `pick_target_version()` 比三处版本——源码 `__version__`、受管目录 `kimi.plugin.json`、市场条目 `pluginVersion`——取一个**严格大于已装、且不撞市场登记**的号（必要时 patch+1），只写进产物，不改源码。装上之后点一次「更新」，三处就收敛到同一个号。
 
 **为什么不再单独一个 update 脚本**：升级只比首装多两件事——版本号要递增、可以 `--offline` 直替——其余打包/自检/登记完全一样。合成一个入口后不会出现「两个脚本各改一半」的漂移，用户也只需要记住一个文件名。

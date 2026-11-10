@@ -21,6 +21,10 @@
 安装动作刻意留给用户在「插件 → 个人」里点 ＋：命令行直装会被记成「本地路径」
 来源，既挡住市场登记，也让后续「更新」按钮撞上插件的 MCP 进程占用目录（EBUSY）。
 
+daimon-share（Kimi 的数据目录）自动探测：--kimi-share > KIMI_SHARE_DIR 环境变量
+> Kimi 日志里的 stateRoot > 默认 %APPDATA%\\kimi-desktop\\daimon-share。自定义过
+数据目录的用户不需要额外参数；探测结果会打印来源，登记失败时也带上实际目录。
+
 为什么要自带运行时：金蝶的 K3LOGIN.DLL 是 32 位进程内 COM 组件，而 Kimi 自带的
 Python 是 64 位，加载不了；插件目录里的 runtime\\python.exe 是 32 位嵌入式发行版。
 """
@@ -449,14 +453,89 @@ def mcp_selftest(runtime_py: Path, timeout: float = 40.0) -> int:
 
 
 # --------------------------------------------------------------------- Kimi
-def kimi_share() -> Path:
+_kimi_share_resolved: Optional[Path] = None
+
+
+def _kimi_desktop_root() -> Path:
     appdata = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
-    return Path(appdata) / "kimi-desktop" / "daimon-share"
+    return Path(appdata) / "kimi-desktop"
 
 
 def kimi_bundle() -> Path:
-    appdata = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
-    return Path(appdata) / "kimi-desktop" / "daimon-bundle"
+    return _kimi_desktop_root() / "daimon-bundle"
+
+
+def _looks_like_share(p: Path) -> bool:
+    """share 目录的标志：里面有 daemon 的工作目录 daimon/。"""
+    return (p / "daimon").is_dir()
+
+
+def _share_candidates() -> "list[tuple[str, Path]]":
+    """按 Kimi 实际的解析顺序列出候选 share 目录。
+
+    Kimi 主进程解析顺序是 KIMI_SHARE_DIR 环境变量 > 内置默认，并把
+    KIMI_SHARE_DIR 传给 daemon；daemon 启动日志里会打
+    stateRoot=<share>\\daimon\\agents\\main，可以反推出真实目录。
+    """
+    cands: list[tuple[str, Path]] = []
+    env = os.environ.get("KIMI_SHARE_DIR")
+    if env and env.strip():
+        cands.append(("环境变量 KIMI_SHARE_DIR", Path(env.strip()).expanduser()))
+
+    logs = _kimi_desktop_root() / "logs"
+    for name in ("main.log", "main.old.log"):
+        f = logs / name
+        if not f.exists():
+            continue
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        hits = re.findall(r"stateRoot=([^\s\"']+)", text)
+        if hits:
+            # stateRoot 固定是 <share>\daimon\agents\main，向上三级回到 share
+            share = Path(hits[-1]).parent.parent.parent
+            cands.append((f"{name} 里的 stateRoot", share))
+            break
+
+    cands.append(("默认位置", _kimi_desktop_root() / "daimon-share"))
+    return cands
+
+
+def kimi_share() -> Path:
+    """当前 Kimi 的 daimon-share 目录（resolve_kimi_share() 之后被固定）。"""
+    if _kimi_share_resolved is not None:
+        return _kimi_share_resolved
+    for _, p in _share_candidates():
+        if _looks_like_share(p):
+            return p
+    return _share_candidates()[-1][1]
+
+
+def resolve_kimi_share(explicit: Optional[str]) -> Path:
+    """确定 share 目录并固定下来，之后的状态探测、登记、替换全部用它。
+
+    用户自定义过数据目录时，写死的默认路径会让登记落到错误位置（表现为
+    Kimi 里看不到插件、注册"失败"），所以必须先解析再动手。
+    """
+    global _kimi_share_resolved
+    if explicit:
+        share = Path(explicit).expanduser().resolve()
+        src = "--kimi-share 指定"
+        if not _looks_like_share(share):
+            warn(f"{share} 下没有 daimon\\ 子目录，不像一个已初始化的 share 目录")
+    else:
+        share, src = _share_candidates()[-1][1], "默认位置"
+        for name, p in _share_candidates():
+            if _looks_like_share(p):
+                share, src = p, name
+                break
+        else:
+            log("    没找到已初始化的 share 目录，按默认位置继续（Kimi 装好后首次运行会创建）")
+        share = Path(share).expanduser().resolve()
+    _kimi_share_resolved = share
+    log(f"    daimon-share: {share}（{src}）")
+    return share
 
 
 def kimi_running() -> bool:
@@ -538,7 +617,11 @@ def register_to_market(share: Path, node: Optional[str]) -> bool:
         if "已通过其他来源安装" in out:
             fail("插件当前是命令行直装状态，无法登记个人市场",
                  "在 Kimi 插件页卸载该插件（或退出 Kimi 后清理 installed.json 条目）再重跑")
-        fail(f"登记个人市场失败（exit {rc}）", out[:900])
+        fail(f"登记个人市场失败（exit {rc}）",
+             out[:900]
+             + f"\n           本次使用的 daimon-share: {share}\n"
+               "           若 Kimi 实际用的是自定义数据目录，请用 --kimi-share 指向它\n"
+               "           （或设置 KIMI_SHARE_DIR 环境变量后重跑）")
 
     log("    已登记到个人市场（插件页「个人」可见）")
     payload = parse_json_tail(out)
@@ -591,7 +674,8 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="只打印版本计划，不动文件")
     ap.add_argument("--python-embed", default=None, help="本地 embed zip 或已解压的运行时目录")
     ap.add_argument("--node", default=None, help="Kimi 插件 CLI 使用的 node.exe")
-    ap.add_argument("--kimi-share", default=None, help="自定义 daimon-share 目录（一般不用）")
+    ap.add_argument("--kimi-share", default=None,
+                    help="自定义 daimon-share 目录（Kimi 改过数据目录时用；默认自动探测）")
     args = ap.parse_args()
 
     log("Kimi 插件安装 / 升级 —— kingdee-kis")
@@ -600,7 +684,8 @@ def main() -> int:
     if not SRC_PKG.exists():
         fail(f"找不到源码包: {SRC_PKG}")
 
-    share = Path(args.kimi_share).expanduser().resolve() if args.kimi_share else kimi_share()
+    # 先确定 share 目录（自定义数据目录的用户不写默认路径），后面全部用它
+    share = resolve_kimi_share(args.kimi_share)
     src = read_version()
     installed = installed_version()
     market = market_version()

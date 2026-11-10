@@ -77,6 +77,7 @@ scripts\kimi_setup.bat
 脚本会自动完成：从华为云镜像下载嵌入式 32 位 Python 3.11.9 → 连同依赖和源码组装成插件包 `dist\kimi\kingdee-kis`（约 26 MB）→ 自检运行时和 MCP 握手 → 注册到 Kimi 个人插件市场。之后在 Kimi 插件页「个人」里点「＋」安装。
 
 - 工具名以 `mcp__plugin-kingdee-kis_kis__` 开头，如 `mcp__plugin-kingdee-kis_kis__kis_describe_entity`
+- **自定义过 Kimi 数据目录（daimon-share）也能用**：脚本按「`KIMI_SHARE_DIR` 环境变量 → Kimi 日志里的 `stateRoot` → 默认路径」自动探测真实目录，也可用 `--kimi-share` 显式指定；脚本开头会打印探测结果和来源
 - **升级**（`git pull` 之后）：还是同一条 `scripts\kimi_setup.bat`，脚本会识别出插件已安装并算出更大的版本号，跑完到 Kimi 插件页点「更新」
   - 版本号由脚本比较「源码 `__version__` / 已装清单 / 市场登记」后决定（作者没改 `__version__` 时自动补 patch 位），否则 Kimi 不显示「更新」
   - 点更新前**不要先进金蝶对话**：插件的 MCP 进程会占用插件目录，导致更新报 `EBUSY`
