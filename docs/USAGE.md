@@ -29,6 +29,8 @@ scripts\setup.bat
 
 结束时若提示「未检测到金蝶登录组件 K3Login」，说明本机没装金蝶客户端，装好后才能连接账套，其余功能不受影响。
 
+这一步只查注册表（ProgID → CLSID → InprocServer32 指向的 DLL 是否存在），不会真正实例化组件：K3Login 是 VB6 组件，在安装脚本的进程里直接创建时，它内部可能抛「运行时错误 91：未设置对象变量或 With block 变量」并弹出阻塞式对话框，脚本就卡在那里不动了。想真的实例化一次，用 `scripts\setup.bat -ProbeCom`（会弹金蝶登录窗或错误框，需手动点掉）。
+
 ### 2.2 创建配置文件（可选）
 
 ```bash
@@ -108,7 +110,7 @@ kingdeeflagship-mcp discover --check-tables
 |---|---|
 | Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
 | WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
-| Kimi 桌面版 | 通过插件清单接入，见仓库 `kimi` 分支 |
+| Kimi 桌面版 | 一键安装为插件：`scripts\kimi-setup.bat`，见「4.4 安装到 Kimi 桌面版」 |
 
 ### 4.2 重启 Agent
 
@@ -117,6 +119,20 @@ kingdeeflagship-mcp discover --check-tables
 ### 4.3 项目目录被移动或改名
 
 在新位置运行 `scripts\setup.bat -Recreate` 重建虚拟环境，再更新 Agent 配置里的路径。
+
+### 4.4 安装到 Kimi 桌面版
+
+前置：已完成 `scripts\setup.bat`，本机装有 Kimi 桌面版和 Node.js。
+
+```bash
+scripts\kimi-setup.bat
+```
+
+脚本自动完成：下载嵌入式 32 位 Python 3.11.9 → 组装插件包 `dist\kimi\kingdee-kis` → 自检运行时与 MCP 握手 → 注册到 Kimi 个人插件市场并尝试安装。之后在 Kimi 插件页「个人」里点「＋」安装（若已直接装好则不用点），工具名以 `mcp__plugin-kingdee-kis_kis__` 开头。
+
+改了代码后重跑同一脚本即为升级；`--build-only` 只打包不安装。凭据、状态、日志存放在 `%LOCALAPPDATA%\kingdeeflagship_mcp\`，升级不丢数据。想免登录弹窗，双击插件目录里的 `setup.cmd` 录入一次凭据。
+
+**升级注意**：Kimi 的「更新」按钮会先把插件目录整体改名，而插件自己的 MCP 进程正跑在该目录内（`runtime\python.exe`），目录被占用时改名会失败并提示「更新失败，请重试」（`EBUSY`）。可靠做法是**完全退出 Kimi** 后再重跑本脚本，或退出 Kimi 后手工用 `dist\kimi\kingdee-kis` 覆盖 `...\kimi-code\home\plugins\managed\kingdee-kis`。
 
 ## 五、高级配置
 

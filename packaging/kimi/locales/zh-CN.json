@@ -1,0 +1,23 @@
+{
+  "displayName": "金蝶 KIS 旗舰版",
+  "shortDescription": "查询本机金蝶账套数据",
+  "longDescription": "通过本机已安装的金蝶 KIS 旗舰版客户端（COM 组件）读取账套，支持记账凭证、科目余额、业务单据、即时库存、应收应付、基础资料查询与只读 SQL 自定义报表，大结果集可导出 Excel 不占用对话上下文。全部为只读操作，不写入账套。第三方开发者维护，非金蝶官方产品。",
+  "developerName": "Cody（第三方开发者）",
+  "tryPrompts": [
+    "连接金蝶账套，看下这个月的记账凭证有多少张",
+    "查一下 2026 年 1 月到 10 月的科目余额表，导出成 Excel",
+    "现在库存里还剩多少物料，按仓库列出来"
+  ],
+  "mcpOverrides": {
+    "kis": {
+      "displayName": "金蝶 KIS 连接器",
+      "description": "读取本机金蝶 KIS 旗舰版账套的只读查询工具集，需要本机已安装金蝶客户端并登录"
+    }
+  },
+  "skillOverrides": {
+    "kingdee-kis": {
+      "displayName": "金蝶 KIS 取数",
+      "description": "金蝶 KIS 旗舰版账套只读查询：凭证、余额、单据、库存、往来与资料，支持导出 Excel"
+    }
+  }
+}

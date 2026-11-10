@@ -1,0 +1,23 @@
+{
+  "displayName": "Kingdee KIS Flagship",
+  "shortDescription": "Query local Kingdee account sets",
+  "longDescription": "Reads account data through the locally installed Kingdee KIS Flagship client (COM): vouchers, account balances, sales and purchase documents, stock on hand, receivables and payables, master data, plus read-only SQL for custom reports. Large result sets can be exported to Excel without consuming conversation context. All operations are read-only. Maintained by a third-party developer; not an official Kingdee product.",
+  "developerName": "Cody (third-party developer)",
+  "tryPrompts": [
+    "Connect to the Kingdee account set and count this month's vouchers",
+    "Show the account balance report for 2026 and export it to Excel",
+    "How much stock is left for each item, grouped by warehouse"
+  ],
+  "mcpOverrides": {
+    "kis": {
+      "displayName": "Kingdee KIS connector",
+      "description": "Read-only query tools for a local Kingdee KIS Flagship account set; requires the Kingdee client installed and signed in"
+    }
+  },
+  "skillOverrides": {
+    "kingdee-kis": {
+      "displayName": "Kingdee KIS data",
+      "description": "Read-only queries against a Kingdee KIS Flagship account set: vouchers, balances, documents, stock, payables and master data, with Excel export"
+    }
+  }
+}

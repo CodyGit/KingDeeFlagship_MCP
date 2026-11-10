@@ -1,0 +1,77 @@
+{
+  "$schema": "https://catalog.msh.team/misc/kimi.plugin.schema.json",
+  "name": "kingdee-kis",
+  "version": "__VERSION__",
+  "description": "通过本机金蝶 KIS 旗舰版客户端查询账套数据（只读）：凭证、科目余额、业务单据、库存、应收应付与基础资料，可导出 Excel。",
+  "keywords": [
+    "金蝶",
+    "KIS",
+    "K3",
+    "账套",
+    "凭证",
+    "科目余额",
+    "库存",
+    "应收应付",
+    "财务报表",
+    "ERP",
+    "kingdee"
+  ],
+  "author": {
+    "name": "Cody"
+  },
+  "homepage": "https://github.com/CodyGit/KingDeeFlagship_MCP",
+  "license": "MIT",
+  "skills": "./skills/",
+  "skillInstructions": "用户提到金蝶、KIS、K3、账套、凭证、科目余额、总账、明细账、库存、销售或采购单据、应收应付、客户/供应商/物料资料，或要求从财务软件里取数、导表时使用本插件。取数前先调用 kis_status 看连接状态；需要连账套时调用 kis_connect（会弹金蝶登录窗，提示用户在该窗口登录）。所有工具只读，不承诺写入或修改账套数据。查询结果为空或失败时如实说明并给出错误提示，绝不编造金额、科目或单据。导出 Excel 前先用 kis_output 确认导出目录，没有就询问用户后再设置。涉及多个账套时先用 kis_subject 解析，未命中就问用户选哪个。",
+  "mcpServers": {
+    "kis": {
+      "command": "./runtime/python.exe",
+      "args": [
+        "-m",
+        "kingdeeflagship_mcp",
+        "mcp"
+      ],
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "startupTimeoutMs": 30000,
+      "toolTimeoutMs": 180000
+    }
+  },
+  "interface": {
+    "displayName": "金蝶 KIS 旗舰版",
+    "shortDescription": "查询本机金蝶账套数据",
+    "longDescription": "通过本机已安装的金蝶 KIS 旗舰版客户端（COM 组件）读取账套，支持记账凭证、科目余额、业务单据、即时库存、应收应付、基础资料查询与只读 SQL 自定义报表，大结果集可导出 Excel 不占用对话上下文。全部为只读操作，不写入账套。第三方开发者维护，非金蝶官方产品。",
+    "developerName": "Cody（第三方开发者）",
+    "websiteURL": "https://github.com/CodyGit/KingDeeFlagship_MCP",
+    "category": "PRODUCTIVITY",
+    "defaultLocale": "zh-CN",
+    "locales": "./locales/",
+    "hostKind": "local",
+    "platforms": [
+      "windows"
+    ],
+    "brandColor": {
+      "light": "#1F6FD0",
+      "dark": "#4C9AFF"
+    },
+    "tryPrompts": [
+      "连接金蝶账套，看下这个月的记账凭证有多少张",
+      "查一下 2026 年 1 月到 10 月的科目余额表，导出成 Excel",
+      "现在库存里还剩多少物料，按仓库列出来"
+    ],
+    "skillOverrides": {
+      "kingdee-kis": {
+        "displayName": "金蝶 KIS 取数",
+        "description": "金蝶 KIS 旗舰版账套只读查询：凭证、余额、单据、库存、往来与资料，支持导出 Excel"
+      }
+    },
+    "mcpOverrides": {
+      "kis": {
+        "displayName": "金蝶 KIS 连接器",
+        "description": "读取本机金蝶 KIS 旗舰版账套的只读查询工具集，需要本机已安装金蝶客户端并登录"
+      }
+    }
+  }
+}
