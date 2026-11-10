@@ -8,7 +8,7 @@
 技术栈：K3Login 登录 → ADODB 只读查询 → MCP stdio 协议。
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __all__ = ["KISConnector", "load_config", "KISError"]
 
 from .config import Config, load_config

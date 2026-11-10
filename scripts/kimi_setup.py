@@ -1,18 +1,20 @@
 # date: 2026-11-09 23:05
 # author: cody
-# description: 把本仓库打包成 Kimi 桌面版插件（kingdee-kis）并注册安装到本机 Kimi
-"""Kimi 桌面版插件打包与安装。
+# description: 把本仓库打包成 Kimi 桌面版插件（kingdee-kis）并注册到本机 Kimi 的个人插件市场
+"""Kimi 桌面版插件打包与注册。
 
 在 scripts\\setup.bat 之后运行：
 
     scripts\\kimi-setup.bat
 
-脚本按顺序做四件事：
+脚本按顺序做三件事：
   1. 组装插件目录 dist/kimi/kingdee-kis/：嵌入式 32 位 Python + pywin32 + openpyxl
      + 本仓库源码 + 清单/图标/技能/语言包
   2. 自检：确认运行时是 32 位、能导入依赖、MCP 握手能列出工具
-  3. 注册到 Kimi 个人插件市场，并安装进 Kimi 的数据目录
-  4. 打印接下来在 Kimi 里怎么用
+  3. 注册到 Kimi 个人插件市场（不安装），打印接下来在 Kimi 里怎么点 ＋
+
+安装动作刻意留给用户在「插件 → 个人」里点 ＋：命令行直装会被记成「本地路径」
+来源，既挡住市场登记，也让后续「更新」按钮撞上插件的 MCP 进程占用目录（EBUSY）。
 
 为什么要自带运行时：金蝶的 K3LOGIN.DLL 是 32 位进程内 COM 组件，而 Kimi 自带的
 Python 是 64 位，加载不了；插件目录里的 runtime\\python.exe 是 32 位嵌入式发行版。
@@ -410,13 +412,19 @@ def parse_json_tail(text: str) -> Optional[dict]:
         return None
 
 
-def install_to_kimi(share: Path, node: Optional[str]) -> bool:
+def register_to_market(share: Path, node: Optional[str]) -> bool:
+    """只把插件登记到 Kimi 个人插件市场，安装与更新都交给 Kimi 插件页。
+
+    不调用 kimi-plugin install：命令行直装会被记成「本地路径」来源，既挡住
+    市场登记，也让插件页的「更新」按钮撞上目录占用（EBUSY）。登记完成后由
+    用户在「插件 → 个人」点 ＋ 安装，来源和版本都归 daemon 管。
+    """
     bundle = kimi_bundle()
     ps1 = bundle / "bin" / "kimi-daimon.ps1"
 
     if not share.exists() or not ps1.exists():
         warn(f"没找到 Kimi 桌面版（{share}）")
-        log("    已生成插件包，但没有安装。装好 Kimi 后再运行本脚本即可：")
+        log("    已生成插件包，但没有登记。装好 Kimi 后再运行本脚本即可：")
         log(f"    {DIST}")
         return False
 
@@ -425,49 +433,37 @@ def install_to_kimi(share: Path, node: Optional[str]) -> bool:
              "安装 Node 后重跑，或指定 --node <node.exe 路径>")
     log(f"    使用 Node: {node}")
 
-    # 官方链路：先登记个人市场（不安装），再直装。顺序反了会被
-    # 「已通过其他来源安装」拒绝——个人市场条目要求插件不处于其它来源的安装态。
     rc, out = run_daimon(ps1, node, ["kimi-plugin", "register-personal", str(DIST),
                                      "--share-dir", str(share), "--market", "personal", "--json"])
     if rc != 0:
         if "已通过其他来源安装" in out:
-            warn("插件当前是命令行直装状态，无法登记个人市场（不影响使用）")
-            log("    想改为「个人」页管理：在插件页卸载本插件后重跑本脚本")
-        else:
-            warn("登记个人市场失败（不影响直装）")
-            lines = [x for x in out.strip().splitlines() if x.strip()]
-            if lines:
-                log(f"    {lines[-1][:300]}")
-    else:
-        log("    已登记到个人市场（插件页「个人」可见）")
+            fail("插件当前是命令行直装状态，无法登记个人市场",
+                 "在 Kimi 插件页卸载该插件（或退出 Kimi 后清理 installed.json 条目）再重跑")
+        fail(f"登记个人市场失败（exit {rc}）", out[:900])
 
-    rc, out = run_daimon(ps1, node, ["kimi-plugin", "install", str(DIST),
-                                     "--share-dir", str(share), "--json"])
-    if rc != 0:
-        if "市场管理" in out:
-            warn("这个插件已由 Kimi 插件市场管理，不能再用命令行覆盖安装")
-            log("    请在 Kimi 的「插件 → 个人」里点＋安装或点更新（daemon 热加载，无需重启）")
-            return True
-        fail(f"安装到 Kimi 失败（exit {rc}）", out[:900])
-    log("    已安装进 Kimi（进程需重启后加载）")
-
+    log("    已登记到个人市场（插件页「个人」可见）")
     payload = parse_json_tail(out)
-    if payload and payload.get("link"):
-        log(f"    链接: {payload['link']}")
+    if payload:
+        info = "  ".join(f"{k}={payload[k]}" for k in ("id", "version", "pluginVersion", "status")
+                         if payload.get(k))
+        if info:
+            log(f"    {info}")
+        if payload.get("link"):
+            log(f"    链接: {payload['link']}")
     return True
 
 
 # --------------------------------------------------------------------- 入口
 def main() -> int:
-    ap = argparse.ArgumentParser(description="打包并安装 Kimi 桌面版插件 kingdee-kis")
+    ap = argparse.ArgumentParser(description="打包 Kimi 桌面版插件 kingdee-kis 并注册到个人市场")
     ap.add_argument("--clean", action="store_true", help="清空构建缓存，强制重新下载嵌入式运行时")
-    ap.add_argument("--build-only", action="store_true", help="只打包，不注册安装")
+    ap.add_argument("--build-only", action="store_true", help="只打包，不注册个人市场")
     ap.add_argument("--python-embed", default=None, help="本地 embed zip 或已解压的运行时目录")
     ap.add_argument("--node", default=None, help="Kimi 插件 CLI 使用的 node.exe")
     ap.add_argument("--kimi-share", default=None, help="自定义 daimon-share 目录（一般不用）")
     args = ap.parse_args()
 
-    log("Kimi 插件打包 / 安装 —— kingdee-kis")
+    log("Kimi 插件打包 / 注册 —— kingdee-kis")
     log(f"仓库: {REPO}")
 
     if not SRC_PKG.exists():
@@ -502,26 +498,26 @@ def main() -> int:
     if args.build_only:
         step("跳过注册（--build-only）")
     else:
-        step("注册并安装到 Kimi")
+        step("注册到 Kimi 个人插件市场")
         share = Path(args.kimi_share).expanduser().resolve() if args.kimi_share else kimi_share()
-        ok = install_to_kimi(share, find_node(args.node))
+        ok = register_to_market(share, find_node(args.node))
 
     log("")
     log("=" * 60)
-    log("完成" + ("：插件已交给 Kimi 管理" if ok else "：插件包已生成"))
+    log("完成" + ("：已登记到 Kimi 个人插件市场" if ok else "：插件包已生成"))
     log(f"产物: {DIST}")
     log("")
     log("接下来：")
     if ok:
-        log("  1. 打开 Kimi，插件页「个人」里点「金蝶 KIS 旗舰版」的 ＋ 安装")
+        log("  1. 打开 Kimi → 插件页「个人」→ 「金蝶 KIS 旗舰版」点 ＋ 安装")
         log("     （daemon 热加载，一般不用重启；若列表没有就重启一次 Kimi）")
         log("  2. 第一次取数会弹金蝶登录窗，在窗口里选账套登录")
         log("  3. 想免弹窗：双击 Kimi 插件目录里的 setup.cmd 录入一次凭据")
-        log("  4. 以后升级：先完全退出 Kimi，再重跑 scripts\\kimi-setup.bat")
-        log("     插件自己的 MCP 进程会占用插件目录，Kimi 开着时点「更新」会报 EBUSY")
+        log("  4. 以后升级：先完全退出 Kimi，再重跑 scripts\\kimi-setup.bat，")
+        log("     然后在插件页点「更新」（插件 MCP 进程占用目录时点更新会报 EBUSY）")
     else:
         log("  1. 装好 Kimi 桌面版后重跑 scripts\\kimi-setup.bat")
-        log("  2. 或在 Kimi 的插件构建工具里安装上面的产物目录")
+        log("  2. 或在 Kimi 的插件构建工具里登记上面的产物目录")
     log("")
     log("插件状态、凭据、日志都在 %LOCALAPPDATA%\\kingdeeflagship_mcp\\，升级插件不会丢")
     log("=" * 60)

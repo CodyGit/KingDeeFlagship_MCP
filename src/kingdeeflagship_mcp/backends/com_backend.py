@@ -138,6 +138,53 @@ class COMBackend(Backend):
             except Exception:  # noqa: BLE001
                 pass
 
+    # ------------------------------------------------------------ 环境
+    @staticmethod
+    def _ensure_system_env() -> None:
+        """补齐宿主可能删掉的系统级环境变量（只填空缺，不覆盖已有值）。
+
+        Kimi 桌面版给 MCP 子进程的是极简环境（实测仅 ~59 个变量，缺
+        ALLUSERSPROFILE / PROGRAMDATA / APPDATA 等）。金蝶的 VB6 登录组件用
+        Environ("ALLUSERSPROFILE") 之类拼配置路径，取到空值就抛
+        「运行时错误 76：未找到路径」，登录窗的机构/账套下拉框也会是空的。
+        """
+        keys = ("ALLUSERSPROFILE", "PROGRAMDATA", "APPDATA", "LOCALAPPDATA",
+                "COMSPEC", "OS", "SESSIONNAME", "COMMONPROGRAMFILES",
+                "PROGRAMFILES", "PUBLIC")
+        if all(os.environ.get(k) for k in keys):
+            return
+        import ctypes  # noqa: PLC0415
+
+        buf = ctypes.create_unicode_buffer(260)
+
+        def shfolder(csidl: int) -> str:
+            try:
+                # SHGetSpecialFolderPathW：不依赖环境变量，直接向系统要真实路径
+                if ctypes.windll.shell32.SHGetSpecialFolderPathW(0, buf, csidl, 0):
+                    return buf.value
+            except Exception:  # noqa: BLE001
+                pass
+            return ""
+
+        sysdrive = os.environ.get("SystemDrive", "C:")
+        sysroot = os.environ.get("SystemRoot", sysdrive + "\\Windows")
+        defaults = {
+            "ALLUSERSPROFILE": shfolder(35),   # CSIDL_COMMON_APPDATA -> C:\ProgramData
+            "PROGRAMDATA": shfolder(35),
+            "APPDATA": shfolder(26),           # CSIDL_APPDATA -> %USERPROFILE%\AppData\Roaming
+            "LOCALAPPDATA": shfolder(28),      # CSIDL_LOCAL_APPDATA
+            # 32 位进程下 CSIDL_PROGRAM_FILES(38) / COMMON(43) 自动指向 Program Files (x86)
+            "PROGRAMFILES": shfolder(38),
+            "COMMONPROGRAMFILES": shfolder(43),
+            "COMSPEC": os.path.join(sysroot, "system32", "cmd.exe"),
+            "OS": "Windows_NT",
+            "SESSIONNAME": "Console",
+            "PUBLIC": sysdrive + "\\Users\\Public",
+        }
+        for key, value in defaults.items():
+            if value and not os.environ.get(key):
+                os.environ[key] = value
+
     # ------------------------------------------------------------ 连接
     def connect(self) -> None:
         try:
@@ -148,6 +195,7 @@ class COMBackend(Backend):
                 "未安装 pywin32", detail=str(e),
                 hint="pip install pywin32；且需在已安装金蝶客户端的 Windows 机器上以 32 位 Python 运行",
             )
+        self._ensure_system_env()
         self.pythoncom_ok = True
         progid = self.com_cfg.get("progid") or "K3Login.ClsLogin"
         try:
