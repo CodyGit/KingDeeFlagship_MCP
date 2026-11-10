@@ -131,6 +131,8 @@ KingDeeFlagship_MCP/
 ├── scripts/
 │   ├── setup.bat             # 初始化入口（调用同目录的 setup.ps1）
 │   ├── setup.ps1             # 准备 32 位 Python、创建 .venv32、安装依赖
+│   ├── kimi_setup.bat        # Kimi 插件安装入口（调用同目录的 kimi_setup.py）
+│   ├── kimi_setup.py         # 组装 Kimi 插件包并注册到个人插件市场
 │   └── export_task.py        # 批量导出一次性脚本模板
 ├── src/
 │   └── kingdeeflagship_mcp/          # 主包
@@ -147,6 +149,7 @@ KingDeeFlagship_MCP/
 │       ├── security.py       # 凭据管理
 │       ├── ado.py            # ADODB 访问
 │       ├── sqlbuilder.py     # SQL 构造器
+│       ├── exporter.py       # Excel 导出
 │       ├── cli.py            # 命令行接口
 │       └── backends/         # 后端实现
 │           ├── __init__.py
@@ -154,12 +157,15 @@ KingDeeFlagship_MCP/
 │           └── com_backend.py
 ├── config/
 │   └── config.example.json   # 示例配置（实际配置在用户数据目录）
-├── docs/                     # 文档（设计、使用指南、重构记录）
+├── packaging/
+│   └── kimi/                 # Kimi 插件包模板（清单、图标、多语言、技能）
+├── docs/                     # 文档（设计、使用指南、迁移说明等，见下方「文档」一节）
 ├── tests/                    # 单元测试（unittest）
+├── build/                    # 构建产物（setup.bat 下载的 32 位 Python、mcp-config.json 等）
+├── dist/                     # 打包产物（kimi_setup.bat 生成的插件包）
 ├── pyproject.toml            # 项目配置
 ├── README.md
-├── LICENSE
-└── .gitignore
+└── LICENSE
 ```
 
 ## MCP 工具列表
@@ -235,6 +241,9 @@ KingDeeFlagship_MCP/
 - `docs/design.md`：项目设计文档（架构、流程、配置、扩展方式、已知问题）
 - `docs/kimi-plugin-design.md`：Kimi 桌面端插件设计（实现见 `packaging/kimi/` 与 `scripts/kimi_setup.py`）
 - `docs/USAGE.md`：安装与使用指南
+- `docs/MIGRATION.md`：迁移说明
+- `docs/PROJECT_OVERVIEW.md`：项目总览
+- `docs/SUMMARY.md`：内容摘要
 
 ## 许可证
 
