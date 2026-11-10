@@ -1,8 +1,12 @@
 @echo off
-REM date: 2026-11-09 23:05
-REM author: cody
-REM description: 双击入口。先运行 setup.bat，再运行本脚本：把连接器打包成 Kimi 插件并注册安装到本机 Kimi
 chcp 65001 >nul
+REM date: 2026-11-10 11:40
+REM author: cody
+REM description: install or upgrade the Kimi plugin: build + register to the personal market.
+REM              Run scripts\setup.bat first. The script detects whether the plugin is
+REM              already installed and bumps the version accordingly.
+REM options: --offline (Kimi must be closed; replace the installed copy directly)
+REM          --dry-run (print the version plan only) / --build-only / --clean
 setlocal
 set PY=%~dp0..\.venv32\Scripts\python.exe
 if not exist "%PY%" (

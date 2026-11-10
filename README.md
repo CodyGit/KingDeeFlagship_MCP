@@ -62,7 +62,7 @@ scripts\setup.bat
 |---|---|
 | Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
 | WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
-| Kimi 桌面版 | 一键安装为插件：`scripts\kimi-setup.bat` |
+| Kimi 桌面版 | 一键安装为插件：`scripts\kimi_setup.bat` |
 
 项目目录被移动或改名后，在新位置运行 `scripts\setup.bat -Recreate`，并更新 Agent 配置里的路径。
 
@@ -71,14 +71,17 @@ scripts\setup.bat
 前置：已运行 `scripts\setup.bat`（生成 `.venv32`），本机装有 Kimi 桌面版和 Node.js。
 
 ```bash
-scripts\kimi-setup.bat
+scripts\kimi_setup.bat
 ```
 
-脚本会自动完成：从华为云镜像下载嵌入式 32 位 Python 3.11.9 → 连同依赖和源码组装成插件包 `dist\kimi\kingdee-kis`（约 26 MB）→ 自检运行时和 MCP 握手 → 注册到 Kimi 个人插件市场并尝试安装。之后在 Kimi 插件页「个人」里点「＋」安装（已直接装好则不用点）。
+脚本会自动完成：从华为云镜像下载嵌入式 32 位 Python 3.11.9 → 连同依赖和源码组装成插件包 `dist\kimi\kingdee-kis`（约 26 MB）→ 自检运行时和 MCP 握手 → 注册到 Kimi 个人插件市场。之后在 Kimi 插件页「个人」里点「＋」安装。
 
 - 工具名以 `mcp__plugin-kingdee-kis_kis__` 开头，如 `mcp__plugin-kingdee-kis_kis__kis_describe_entity`
-- 改了代码后重跑 `scripts\kimi-setup.bat` 即为升级；`--build-only` 只打包不安装
-- **升级前请先完全退出 Kimi**：Kimi 的「更新」会先重命名插件目录，而插件自己的 MCP 进程正占用该目录，会报「更新失败，请重试」（`EBUSY`）
+- **升级**（`git pull` 之后）：还是同一条 `scripts\kimi_setup.bat`，脚本会识别出插件已安装并算出更大的版本号，跑完到 Kimi 插件页点「更新」
+  - 版本号由脚本比较「源码 `__version__` / 已装清单 / 市场登记」后决定（作者没改 `__version__` 时自动补 patch 位），否则 Kimi 不显示「更新」
+  - 点更新前**不要先进金蝶对话**：插件的 MCP 进程会占用插件目录，导致更新报 `EBUSY`
+  - 更新失败就先完全退出 Kimi，再跑 `scripts\kimi_setup.bat --offline` 直接替换插件目录（不用再点更新）
+  - `scripts\kimi_setup.bat --dry-run` 只打印版本计划，不动文件
 - 插件状态、凭据、日志都在 `%LOCALAPPDATA%\kingdeeflagship_mcp\`，升级不会丢
 - 想免登录弹窗：双击插件目录里的 `setup.cmd` 录入一次凭据（DPAPI 加密）
 

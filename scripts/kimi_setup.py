@@ -1,17 +1,22 @@
 # date: 2026-11-09 23:05
 # author: cody
 # description: 把本仓库打包成 Kimi 桌面版插件（kingdee-kis）并注册到本机 Kimi 的个人插件市场
-"""Kimi 桌面版插件打包与注册。
+"""Kimi 桌面版插件打包、注册与升级（一个入口，首次安装和升级共用）。
 
 在 scripts\\setup.bat 之后运行：
 
-    scripts\\kimi-setup.bat
+    scripts\\kimi_setup.bat              # 首次安装或升级，脚本按 Kimi 当前状态自行判断
+    scripts\\kimi_setup.bat --offline    # 先完全退出 Kimi：直接替换已装目录，不用在插件页点更新
+    scripts\\kimi_setup.bat --dry-run    # 只打印版本计划，不动文件
 
-脚本按顺序做三件事：
-  1. 组装插件目录 dist/kimi/kingdee-kis/：嵌入式 32 位 Python + pywin32 + openpyxl
-     + 本仓库源码 + 清单/图标/技能/语言包
-  2. 自检：确认运行时是 32 位、能导入依赖、MCP 握手能列出工具
-  3. 注册到 Kimi 个人插件市场（不安装），打印接下来在 Kimi 里怎么点 ＋
+一套流程覆盖两种场景，区别只在版本号和收尾提示：
+  * 首次安装：打包 → 自检 → 登记个人市场 → 在「插件 → 个人」点 ＋
+  * 升级（git pull 之后）：算一个严格大于已装/已登记版本的版本号 → 打包 → 自检 → 重新登记
+    → 在插件页点「更新」（或 --offline 直接替换受管目录）
+
+为什么版本号要算：Kimi 只在「登记版本 > 已装版本」时才显示「更新」，而作者改代码
+不一定 bump __version__，所以由 pick_target_version() 比三处实际版本后决定（只写进
+产物，不改源码）。
 
 安装动作刻意留给用户在「插件 → 个人」里点 ＋：命令行直装会被记成「本地路径」
 来源，既挡住市场登记，也让后续「更新」按钮撞上插件的 MCP 进程占用目录（EBUSY）。
@@ -36,7 +41,7 @@ import time
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Iterable, NoReturn, Optional
+from typing import Iterable, NoReturn, Optional, Tuple
 
 REPO = Path(__file__).resolve().parents[1]
 SRC_PKG = REPO / "src" / "kingdeeflagship_mcp"
@@ -136,6 +141,85 @@ def site_packages() -> Path:
     if p.exists():
         return p
     fail(f"找不到 {p}")
+
+
+# ------------------------------------------------------- 已装状态与版本计划
+Version = Tuple[int, int, int]
+
+
+def managed_root() -> Path:
+    """Kimi 安装后的插件副本目录，「已装版本」以这里的清单为准。"""
+    return (kimi_share() / "daimon" / "runtime" / "kimi-code" / "home"
+            / "plugins" / "managed" / PLUGIN_ID)
+
+
+def market_entry() -> Path:
+    """个人市场登记文件，daemon 用它决定插件页里显示什么版本。"""
+    return kimi_share() / "daimon" / "plugin-market" / "personal" / f"{PLUGIN_ID}.json"
+
+
+def parse_version(text: Optional[str]) -> Optional[Version]:
+    parts = str(text or "").strip().split(".")
+    if len(parts) < 3:
+        return None
+    try:
+        return int(parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        return None
+
+
+def fmt_version(v: Version) -> str:
+    return f"{v[0]}.{v[1]}.{v[2]}"
+
+
+def installed_version() -> Optional[str]:
+    try:
+        data = json.loads((managed_root() / "kimi.plugin.json").read_text(encoding="utf-8"))
+        return data.get("version")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def market_version() -> Optional[str]:
+    try:
+        data = json.loads(market_entry().read_text(encoding="utf-8"))
+        return data.get("pluginVersion")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def pick_target_version(src: str, installed: Optional[str],
+                        market: Optional[str]) -> Tuple[str, str]:
+    """返回 (本次打包版本, 说明)，保证它大于已装版本、也不与市场登记撞号。
+
+    Kimi 靠「登记版本 > 已装版本」显示「更新」，所以：
+      * 没装过：源码版本够用（但要压过可能残留的市场登记，否则 ＋ 装下来还是旧包）
+      * 装过：源码版本更大就用源码版本；否则在 max(已装, 市场) 上 patch+1
+        比对市场也算一遍，是为了一次没点更新就再跑一次脚本时仍能重新登记。
+    """
+    src_v = parse_version(src)
+    if src_v is None:
+        fail(f"源码版本不是 x.y.z：{src}", "Kimi 用版本号判断是否可更新")
+
+    inst_v = parse_version(installed) if installed else None
+    mkt_v = parse_version(market) if market else None
+
+    if inst_v is None:
+        if mkt_v is not None and src_v <= mkt_v:
+            bumped = (mkt_v[0], mkt_v[1], mkt_v[2] + 1)
+            return fmt_version(bumped), f"源码 {src} 不高于市场登记 {market}，补到 {fmt_version(bumped)}"
+        return fmt_version(src_v), "首次安装，用源码版本"
+
+    if src_v > inst_v and (mkt_v is None or src_v > mkt_v):
+        return fmt_version(src_v), f"源码版本 {src} 高于已装 {installed}"
+
+    base = max(inst_v, mkt_v or inst_v)
+    bumped = (base[0], base[1], base[2] + 1)
+    if mkt_v is not None and mkt_v > inst_v:
+        why = f"市场已登记 {market} 但没更新过，本次补到 {fmt_version(bumped)}"
+    else:
+        why = f"源码 {src} 未超过已装 {installed}，自动补到 {fmt_version(bumped)}"
+    return fmt_version(bumped), why
 
 
 # --------------------------------------------------------------------- 运行时
@@ -256,8 +340,13 @@ def copy_assets() -> None:
     shutil.copytree(ASSETS / "skills", DIST / "skills", dirs_exist_ok=True)
 
 
-def build_plugin(embed: Path) -> str:
-    version = read_version()
+def build_plugin(embed: Path, version: Optional[str] = None) -> str:
+    """组装 dist 目录。version 为空时取源码 __version__，否则用传入值。
+
+    升级时传的是 pick_target_version() 算出的版本号（可能比源码大），因为
+    Kimi 靠版本号变大才显示「更新」。
+    """
+    version = version or read_version()
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir(parents=True)
@@ -370,6 +459,16 @@ def kimi_bundle() -> Path:
     return Path(appdata) / "kimi-desktop" / "daimon-bundle"
 
 
+def kimi_running() -> bool:
+    """--offline 要替换受管目录，Kimi 开着时文件被占用。"""
+    try:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq Kimi.exe"],
+                             capture_output=True, timeout=20).stdout or b""
+        return b"kimi.exe" in out.lower()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def find_node(explicit: Optional[str]) -> Optional[str]:
     candidates: list[str] = []
     if explicit:
@@ -453,73 +552,152 @@ def register_to_market(share: Path, node: Optional[str]) -> bool:
     return True
 
 
+def replace_managed(version: str) -> None:
+    """把 dist 整体换进 Kimi 的受管目录，省掉在插件页点「更新」（Kimi 必须已退出）。
+
+    先改名再复制：复制中途失败还能把旧目录改回来。Kimi 的「更新」按钮也是这么做的
+    （改成 -previous），所以插件自己的 MCP 进程占着 runtime\\python.exe 时会 EBUSY。
+    """
+    target = managed_root()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    old = target.with_name(f"{PLUGIN_ID}.old-{time.strftime('%H%M%S')}")
+
+    if target.exists():
+        target.rename(old)
+    try:
+        shutil.copytree(DIST, target)
+    except Exception as e:  # noqa: BLE001
+        if not target.exists() and old.exists():
+            old.rename(target)
+        fail(f"复制到 Kimi 受管目录失败: {e}",
+             "确认 Kimi 已完全退出（托盘右键退出），再重试")
+
+    got = json.loads((target / "kimi.plugin.json").read_text(encoding="utf-8")).get("version")
+    if got != version:
+        fail(f"替换后版本不符：期望 {version}，实际 {got}")
+    if old.exists():
+        shutil.rmtree(old, ignore_errors=True)
+    log(f"    已替换 Kimi 受管目录为 {version}")
+
+
 # --------------------------------------------------------------------- 入口
 def main() -> int:
-    ap = argparse.ArgumentParser(description="打包 Kimi 桌面版插件 kingdee-kis 并注册到个人市场")
+    ap = argparse.ArgumentParser(
+        description="打包 Kimi 桌面版插件 kingdee-kis 并登记个人市场（首次安装与升级共用）")
     ap.add_argument("--clean", action="store_true", help="清空构建缓存，强制重新下载嵌入式运行时")
-    ap.add_argument("--build-only", action="store_true", help="只打包，不注册个人市场")
+    ap.add_argument("--build-only", action="store_true", help="只打包，不登记个人市场")
+    ap.add_argument("--offline", action="store_true",
+                    help="直接替换 Kimi 已装目录（需先完全退出 Kimi，不用在插件页点更新）")
+    ap.add_argument("--dry-run", action="store_true", help="只打印版本计划，不动文件")
     ap.add_argument("--python-embed", default=None, help="本地 embed zip 或已解压的运行时目录")
     ap.add_argument("--node", default=None, help="Kimi 插件 CLI 使用的 node.exe")
     ap.add_argument("--kimi-share", default=None, help="自定义 daimon-share 目录（一般不用）")
     args = ap.parse_args()
 
-    log("Kimi 插件打包 / 注册 —— kingdee-kis")
+    log("Kimi 插件安装 / 升级 —— kingdee-kis")
     log(f"仓库: {REPO}")
 
     if not SRC_PKG.exists():
         fail(f"找不到源码包: {SRC_PKG}")
 
+    share = Path(args.kimi_share).expanduser().resolve() if args.kimi_share else kimi_share()
+    src = read_version()
+    installed = installed_version()
+    market = market_version()
+    target, why = pick_target_version(src, installed, market)
+    upgrading = installed is not None
+
+    step("版本计划")
+    log(f"    源码 __version__: {src}")
+    log(f"    Kimi 已装:       {installed or '未安装'}")
+    log(f"    个人市场登记:    {market or '未登记'}")
+    log(f"    本次打包版本:    {target}（{why}）")
+    log(f"    场景:            {'升级 ' + installed + ' → ' + target if upgrading else '首次安装'}")
+
+    if args.dry_run:
+        log("")
+        log("--dry-run：只打印计划，不做任何改动")
+        return 0
+
+    if args.offline:
+        if not upgrading:
+            fail("Kimi 里还没有安装这个插件，--offline 无从替换",
+                 "先不带参数运行一次 scripts\\kimi_setup.bat，在插件页「个人」点 ＋ 安装")
+        if kimi_running():
+            fail("--offline 需要 Kimi 完全退出",
+                 "托盘右键退出 Kimi（不是只关窗口），再重跑本脚本")
+    elif upgrading and kimi_running():
+        warn("Kimi 正在运行：可以继续，但市场条目可能被 daemon 覆盖")
+        log("    若稍后在插件页看不到「更新」，退出 Kimi 后重跑本脚本")
+
+    if target != src:
+        warn(f"源码 __version__ 仍是 {src}，本次只用 {target} 打包（不改源码）")
+        log("    想让版本号自然衔接，建议顺手 bump src\\kingdeeflagship_mcp\\__init__.py")
+
     if args.clean and (CACHE / EMBED_NAME).exists():
         (CACHE / EMBED_NAME).unlink()
 
-    step("检查环境")
+    step("检查 .venv32")
     py = venv_python()
-    version = read_version()
     bits = subprocess.run([str(py), "-c", "import struct;print(struct.calcsize('P')*8)"],
                           capture_output=True, text=True).stdout.strip()
     if bits != "32":
         fail(f".venv32 是 {bits} 位，必须是 32 位", "运行 scripts\\setup.bat -Recreate")
-    log(f"    .venv32: 32 位，源码版本 {version}")
+    log("    32 位 OK")
 
     step("准备嵌入式 Python 运行时")
     embed = ensure_embed_zip(args.python_embed)
 
     step("组装插件目录")
-    build_plugin(embed)
+    build_plugin(embed, version=target)
 
     step("自检运行时")
     runtime_py = DIST / "runtime" / "python.exe"
     runtime_selftest(runtime_py)
 
     step("自检 MCP 服务")
-    mcp_selftest(runtime_py)
+    tools = mcp_selftest(runtime_py)
 
     ok = False
     if args.build_only:
-        step("跳过注册（--build-only）")
+        step("跳过登记（--build-only）")
     else:
-        step("注册到 Kimi 个人插件市场")
-        share = Path(args.kimi_share).expanduser().resolve() if args.kimi_share else kimi_share()
+        step("登记到 Kimi 个人插件市场")
         ok = register_to_market(share, find_node(args.node))
+
+    if args.offline:
+        step("替换 Kimi 已装目录（离线升级）")
+        replace_managed(target)
 
     log("")
     log("=" * 60)
-    log("完成" + ("：已登记到 Kimi 个人插件市场" if ok else "：插件包已生成"))
+    log(f"{'升级完成' if upgrading else '打包完成'}：{target}（{tools} 个工具）"
+        + ("" if ok or args.build_only else "，但没登记进 Kimi"))
     log(f"产物: {DIST}")
     log("")
-    log("接下来：")
-    if ok:
+    if not ok and not args.build_only:
+        log("接下来：")
+        log("  1. 装好 Kimi 桌面版后重跑 scripts\\kimi_setup.bat")
+        log("  2. 或在 Kimi 的插件构建工具里登记上面的产物目录")
+    elif args.build_only:
+        log("--build-only：没有登记，Kimi 里不会出现这个插件。")
+    elif args.offline:
+        log("已直接写进 Kimi 的插件目录：打开 Kimi 就是新版本，不用点更新。")
+    elif upgrading:
+        log("接下来：")
+        log("  1. 打开 Kimi → 插件页「个人」→ 点「更新」")
+        log("  2. 点更新前别先进金蝶对话：插件的 MCP 进程会占用插件目录，")
+        log("     导致更新报 EBUSY（resource busy or locked）")
+        log("  3. 更新失败：完全退出 Kimi，再跑 scripts\\kimi_setup.bat --offline")
+    else:
+        log("接下来：")
         log("  1. 打开 Kimi → 插件页「个人」→ 「金蝶 KIS 旗舰版」点 ＋ 安装")
         log("     （daemon 热加载，一般不用重启；若列表没有就重启一次 Kimi）")
         log("  2. 第一次取数会弹金蝶登录窗，在窗口里选账套登录")
         log("  3. 想免弹窗：双击 Kimi 插件目录里的 setup.cmd 录入一次凭据")
-        log("  4. 以后升级：先完全退出 Kimi，再重跑 scripts\\kimi-setup.bat，")
-        log("     然后在插件页点「更新」（插件 MCP 进程占用目录时点更新会报 EBUSY）")
-    else:
-        log("  1. 装好 Kimi 桌面版后重跑 scripts\\kimi-setup.bat")
-        log("  2. 或在 Kimi 的插件构建工具里登记上面的产物目录")
+        log("  4. 以后升级：git pull 后重跑 scripts\\kimi_setup.bat，再在插件页点「更新」")
     log("")
-    log("插件状态、凭据、日志都在 %LOCALAPPDATA%\\kingdeeflagship_mcp\\，升级插件不会丢")
+    log("插件状态、凭据、日志都在 %LOCALAPPDATA%\\kingdeeflagship_mcp\\，重装/升级不会丢")
     log("=" * 60)
     return 0
 

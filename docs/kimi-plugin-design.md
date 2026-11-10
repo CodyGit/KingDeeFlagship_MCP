@@ -42,8 +42,8 @@ KingDeeFlagship_MCP/
 │       ├── locales/{zh-CN,en-US}.json
 │       └── skills/kingdee-kis/SKILL.md
 └── scripts/
-    ├── kimi_setup.py               # 构建 + 自检 + 注册安装
-    └── kimi-setup.bat              # 双击入口（校验 .venv32 后调用上面的脚本）
+    ├── kimi_setup.py               # 唯一入口：构建 + 自检 + 注册，首装/升级自动切换
+    └── kimi_setup.bat              # 双击入口（校验 .venv32 后调用上面的脚本）
 ```
 
 `scripts/kimi_setup.py` 流程：
@@ -52,9 +52,9 @@ KingDeeFlagship_MCP/
 2. 解压到 `runtime/`，从 `.venv32/Lib/site-packages` 复制 `win32 / win32com / win32comext / pythoncom.py / openpyxl / et_xmlfile`，两个 pywin32 DLL 放到 `python.exe` 旁
 3. 写 `python311._pth`：`python311.zip` / `.` / `Lib\site-packages`（含 win32、win32comext）/ `..\app`
 4. 复制 `src/kingdeeflagship_mcp` 到 `app/`（排除 `__pycache__`），复制静态资源与 `setup.cmd`
-5. 读 `kingdeeflagship_mcp.__version__` 注入清单 `version`（必须是 x.y.z）
+5. 算版本号（见第 7 节）并注入清单 `version`（必须是 x.y.z）
 6. 自检：32 位确认 + 依赖导入 + MCP `initialize`/`tools/list` 握手
-7. 注册到个人插件市场，再尝试命令行安装（见第 7 节）
+7. 只登记到个人插件市场，安装/更新由用户在 Kimi 插件页点（见第 7 节）
 
 依赖直接从 `.venv32` 取，不额外下载 wheel，保证「构建用的依赖」和「setup.bat 验证过的依赖」是同一份。
 
@@ -110,22 +110,34 @@ MCP 服务器是常驻进程，不放行写入（`allow_write` 保持 false）�
 
 ## 7. 安装与更新流程
 
+一个脚本、四条命令，首次安装和升级走同一份代码——脚本读三处版本后自己判断是「首次安装」还是「升级」：
+
 ```bash
-# 构建 + 自检 + 注册到个人市场（+ 尝试命令行安装）
-scripts\kimi-setup.bat
+# 首装或升级（git pull 之后就重跑这一条）：算版本号 + 打包 + 自检 + 登记个人市场
+scripts\kimi_setup.bat
 
 # 只构建，不动本机 Kimi
-scripts\kimi-setup.bat --build-only
+scripts\kimi_setup.bat --build-only
+
+# 升级备选：Kimi 已完全退出时直接替换受管目录，不用再点更新
+scripts\kimi_setup.bat --offline
+
+# 只看版本计划，不动文件
+scripts\kimi_setup.bat --dry-run
 ```
 
 脚本内部调用 Kimi 自带的 CLI（`kimi-daimon kimi-plugin ...`），本机需有 Node.js：
 
 1. `register-personal dist\kimi\kingdee-kis --market personal` —— 只登记，不安装；之后在「插件 → 个人」点 ＋，由 daemon 自己装并热加载
-2. 再尝试 `install`：若插件已由市场管理，这一步会被拒绝（"已由 Kimi 插件市场管理"），属正常保护，按提示去「个人」页装/更新即可
+2. **不调用 `kimi-plugin install`**：命令行直装会把来源记成「本地路径」，既挡住市场登记（"已通过其他来源安装"），也让后续「更新」撞上目录占用
 
-顺序不能反：插件处于命令行直装状态时，`register-personal` 会被"已通过其他来源安装"拒绝。
+**版本号为什么是算出来的**：Kimi 只在「市场登记版本 > 已装版本」时显示「更新」。作者改代码时不一定 bump `__version__`，所以 `pick_target_version()` 比三处版本——源码 `__version__`、受管目录 `kimi.plugin.json`、市场条目 `pluginVersion`——取一个**严格大于已装、且不撞市场登记**的号（必要时 patch+1），只写进产物，不改源码。装上之后点一次「更新」，三处就收敛到同一个号。
 
-**升级的已知限制**：Kimi 的「更新」会先把 `...\home\plugins\managed\kingdee-kis` 整体改名，而插件自己的 MCP 进程（`runtime\python.exe -m kingdeeflagship_mcp mcp`）正跑在该目录内，改名会失败并提示「更新失败，请重试」（`EBUSY`）。因此升级要**先完全退出 Kimi**，再重跑脚本；或在 Kimi 关闭时用新产物覆盖受管目录（版本号取自目录内 `kimi.plugin.json`，`installed.json` 不含版本字段，无需改动）。
+**为什么不再单独一个 update 脚本**：升级只比首装多两件事——版本号要递增、可以 `--offline` 直替——其余打包/自检/登记完全一样。合成一个入口后不会出现「两个脚本各改一半」的漂移，用户也只需要记住一个文件名。
+
+**升级的已知限制**：Kimi 的「更新」会先把 `...\home\plugins\managed\kingdee-kis` 整体改名，而插件自己的 MCP 进程（`runtime\python.exe -m kingdeeflagship_mcp mcp`）正跑在该目录内，改名会失败并提示「更新失败，请重试」（`EBUSY`）。所以点更新前不要先进金蝶对话；失败则完全退出 Kimi 后用 `--offline` 由脚本直接替换受管目录（版本号取自目录内 `kimi.plugin.json`，`installed.json` 不含版本字段，无需改动）。
+
+**升级的已知限制**：Kimi 的「更新」会先把 `...\home\plugins\managed\kingdee-kis` 整体改名，而插件自己的 MCP 进程（`runtime\python.exe -m kingdeeflagship_mcp mcp`）正跑在该目录内，改名会失败并提示「更新失败，请重试」（`EBUSY`）。所以点更新前不要先进金蝶对话；失败则完全退出 Kimi 后用 `--offline` 由脚本直接替换受管目录（版本号取自目录内 `kimi.plugin.json`，`installed.json` 不含版本字段，无需改动）。
 
 ## 8. 已完成的前置修正
 
@@ -136,7 +148,7 @@ scripts\kimi-setup.bat --build-only
 
 ## 9. 验证方式
 
-1. `scripts\kimi-setup.bat` 构建成功，产物结构符合第 2 节
+1. `scripts\kimi_setup.bat` 构建成功，产物结构符合第 2 节
 2. `dist\kimi\kingdee-kis\runtime\python.exe -m kingdeeflagship_mcp status` 输出状态 JSON（会弹登录窗）
 3. 用管道发送 `initialize` / `tools/list`，确认工具清单正确（脚本内已自动做这一步）
 4. 在 Kimi 中跑一条 tryPrompt，确认登录窗里有机构/账套、登录后能返回数据

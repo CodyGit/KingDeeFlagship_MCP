@@ -110,7 +110,7 @@ kingdeeflagship-mcp discover --check-tables
 |---|---|
 | Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
 | WorkBuddy | `%USERPROFILE%\.workbuddy\mcp.json` |
-| Kimi 桌面版 | 一键安装为插件：`scripts\kimi-setup.bat`，见「4.4 安装到 Kimi 桌面版」 |
+| Kimi 桌面版 | 一键安装为插件：`scripts\kimi_setup.bat`，见「4.4 安装到 Kimi 桌面版」 |
 
 ### 4.2 重启 Agent
 
@@ -125,14 +125,24 @@ kingdeeflagship-mcp discover --check-tables
 前置：已完成 `scripts\setup.bat`，本机装有 Kimi 桌面版和 Node.js。
 
 ```bash
-scripts\kimi-setup.bat
+scripts\kimi_setup.bat
 ```
 
-脚本自动完成：下载嵌入式 32 位 Python 3.11.9 → 组装插件包 `dist\kimi\kingdee-kis` → 自检运行时与 MCP 握手 → 注册到 Kimi 个人插件市场并尝试安装。之后在 Kimi 插件页「个人」里点「＋」安装（若已直接装好则不用点），工具名以 `mcp__plugin-kingdee-kis_kis__` 开头。
+脚本自动完成：下载嵌入式 32 位 Python 3.11.9 → 组装插件包 `dist\kimi\kingdee-kis` → 自检运行时与 MCP 握手 → 注册到 Kimi 个人插件市场。之后在 Kimi 插件页「个人」里点「＋」安装，工具名以 `mcp__plugin-kingdee-kis_kis__` 开头。
 
-改了代码后重跑同一脚本即为升级；`--build-only` 只打包不安装。凭据、状态、日志存放在 `%LOCALAPPDATA%\kingdeeflagship_mcp\`，升级不丢数据。想免登录弹窗，双击插件目录里的 `setup.cmd` 录入一次凭据。
+升级（`git pull` 之后）就是同一条命令，脚本会识别出「已安装」并按升级处理：
 
-**升级注意**：Kimi 的「更新」按钮会先把插件目录整体改名，而插件自己的 MCP 进程正跑在该目录内（`runtime\python.exe`），目录被占用时改名会失败并提示「更新失败，请重试」（`EBUSY`）。可靠做法是**完全退出 Kimi** 后再重跑本脚本，或退出 Kimi 后手工用 `dist\kimi\kingdee-kis` 覆盖 `...\kimi-code\home\plugins\managed\kingdee-kis`。
+```bash
+scripts\kimi_setup.bat              # 打包 + 登记新版本，然后在 Kimi 里点「更新」
+scripts\kimi_setup.bat --offline    # 先完全退出 Kimi：直接替换插件目录，不用点更新
+scripts\kimi_setup.bat --dry-run    # 只看版本计划，不动文件
+```
+
+脚本会把「源码版本 / Kimi 已装版本 / 市场登记版本」三者对齐，取一个**严格大于已装**的版本号——Kimi 只认版本号变大才显示「更新」，所以作者没改 `__version__` 时它会自动补 patch 位。点更新前不要先进金蝶对话：插件的 MCP 进程会占用插件目录，更新会报 `EBUSY`。
+
+凭据、状态、日志存放在 `%LOCALAPPDATA%\kingdeeflagship_mcp\`，升级不丢数据。想免登录弹窗，双击插件目录里的 `setup.cmd` 录入一次凭据。
+
+**升级为什么会失败**：Kimi 的「更新」按钮会先把插件目录整体改名，而插件自己的 MCP 进程正跑在该目录内（`runtime\python.exe`），目录被占用时改名会失败并提示「更新失败，请重试」（`EBUSY`）。这正是 `--offline` 存在的原因：完全退出 Kimi 后由脚本直接替换目录，绕过重命名这一步。
 
 ## 五、高级配置
 
