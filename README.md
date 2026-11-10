@@ -58,6 +58,8 @@ scripts\setup.bat
 
 `<项目目录>` 是你克隆的位置，使用 `scripts\setup.bat` 打印的真实路径即可，不需要 `cwd` 和 `PYTHONPATH`。
 
+WorkBuddy 用户可以直接一键接入：运行 `scripts\workbuddy_setup.bat`，脚本会自动把 `kingdee-kis` 连接器**合并**进 `%USERPROFILE%\.workbuddy\mcp.json`（已包含则跳过，修改前自动备份），并把使用指南安装为 WorkBuddy 技能（`~\.workbuddy\skills\kingdee-kis\`），可重复运行。
+
 | Agent | 配置文件 |
 |---|---|
 | Claude Desktop | `%APPDATA%\Claude\claude_desktop_config.json` |
@@ -133,6 +135,8 @@ KingDeeFlagship_MCP/
 │   ├── setup.ps1             # 准备 32 位 Python、创建 .venv32、安装依赖
 │   ├── kimi_setup.bat        # Kimi 插件安装入口（调用同目录的 kimi_setup.py）
 │   ├── kimi_setup.py         # 组装 Kimi 插件包并注册到个人插件市场
+│   ├── workbuddy_setup.bat   # WorkBuddy 一键接入入口（调用同目录的 workbuddy_setup.py）
+│   ├── workbuddy_setup.py    # 合并 mcp.json + 安装 Skill 到 WorkBuddy（幂等）
 │   └── export_task.py        # 批量导出一次性脚本模板
 ├── src/
 │   └── kingdeeflagship_mcp/          # 主包
